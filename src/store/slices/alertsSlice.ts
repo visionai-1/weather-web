@@ -45,9 +45,9 @@ export const fetchAlerts = createAsyncThunk(
     try {
       const state = getState() as { alerts: AlertsState };
       
-      // Prevent multiple simultaneous requests
+      // If already loading, return current alerts instead of throwing error
       if (state.alerts.alertsLoading) {
-        throw new Error('Already loading alerts');
+        return state.alerts.alerts;
       }
       
       // Don't refetch if we have recent data (less than 2 minutes old)
@@ -74,9 +74,9 @@ export const fetchAlertsSnapshot = createAsyncThunk(
     try {
       const state = getState() as { alerts: AlertsState };
       
-      // Prevent multiple simultaneous requests
+      // If already loading, return current snapshot instead of throwing error
       if (state.alerts.snapshotLoading) {
-        throw new Error('Already loading snapshot');
+        return state.alerts.snapshot;
       }
       
       // Don't refetch if we have recent data (less than 30 seconds old)
@@ -105,7 +105,7 @@ export const createNewAlert = createAsyncThunk(
       
       // Prevent multiple simultaneous create operations
       if (state.alerts.creating) {
-        throw new Error('Already creating alert');
+        return rejectWithValue('Alert creation already in progress');
       }
       
       const response = await createAlert(alertData);
@@ -135,7 +135,7 @@ export const deleteAlertById = createAsyncThunk(
       
       // Prevent multiple delete operations for the same alert
       if (state.alerts.deleting[alertId]) {
-        throw new Error('Already deleting alert');
+        return rejectWithValue({ error: 'Delete operation already in progress', alertId });
       }
       
       const response = await deleteAlert(alertId);
@@ -165,6 +165,10 @@ export const alertsSlice = createSlice({
     refreshData: (state) => {
       state.lastAlertsUpdate = null;
       state.lastSnapshotUpdate = null;
+    },
+    clearErrors: (state) => {
+      state.alertsError = null;
+      state.snapshotError = null;
     },
     setDeleting: (state, action: PayloadAction<{ alertId: string; isDeleting: boolean }>) => {
       const { alertId, isDeleting } = action.payload;
@@ -239,4 +243,4 @@ export const alertsSlice = createSlice({
   },
 });
 
-export const { refreshData, setDeleting } = alertsSlice.actions;
+export const { refreshData, setDeleting, clearErrors } = alertsSlice.actions;

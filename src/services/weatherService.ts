@@ -1,60 +1,174 @@
-import { weatherApi, apiRequest, getWeatherApiKey } from './api';
-import type { WeatherData, Location, ApiResponse } from '@/types';
+import { apiRequest, tomorrowWeatherApi } from './api';
+import type { WeatherData, ForecastData, Location, ApiResponse } from '@/types';
 
-// Get API key helper
-const getApiKey = () => getWeatherApiKey();
-
-// Mock method for demo purposes when API key is not available
+// Mock weather data for development/demo
 export const getMockWeatherData = (location?: Location): WeatherData => {
+  const randomTemp = Math.floor(Math.random() * 35) + 5; // 5-40°C
+  const randomHumidity = Math.floor(Math.random() * 60) + 30; // 30-90%
+  
   return {
-    weather: [
-      {
-        id: 800,
-        main: 'Clear',
-        description: 'clear sky',
-        icon: '01d',
-      },
-    ],
-    main: {
-      temp: 22.5,
-      feels_like: 24.1,
-      temp_min: 20.0,
-      temp_max: 25.0,
-      pressure: 1013,
-      humidity: 60,
+    location: location || { lat: 40.7128, lon: -74.0060, name: 'Demo Location' },
+    timestamp: new Date().toISOString(),
+    temperature: randomTemp,
+    humidity: randomHumidity,
+    windSpeed: Math.random() * 10 + 2,
+    windDirection: Math.floor(Math.random() * 360),
+    precipitation: {
+      intensity: Math.random() * 5,
+      probability: Math.random() * 100,
     },
-    visibility: 10000,
-    wind: {
-      speed: 3.2,
-      deg: 180,
-    },
-    name: location?.name || 'Demo City',
-    country: 'XX',
+    visibility: 10000 + Math.floor(Math.random() * 5000),
+    uvIndex: Math.floor(Math.random() * 11),
+    cloudCover: Math.floor(Math.random() * 100),
+    pressure: 1013 + Math.floor(Math.random() * 40) - 20,
+    weatherCode: 1000,
+    description: 'Clear sky',
   };
 };
 
 // Get current weather by location coordinates
 export const getCurrentWeather = async (location: Location): Promise<ApiResponse<WeatherData>> => {
-  return apiRequest<WeatherData>(weatherApi, {
+  // For demo purposes, return mock data if API is not available
+  if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
+    return {
+      data: getMockWeatherData(location),
+      success: true,
+    };
+  }
+
+  return apiRequest<WeatherData>(tomorrowWeatherApi, {
     method: 'GET',
-    url: '/weather',
+    url: 'weather/realtime',
     params: {
       lat: location.lat,
       lon: location.lon,
-      appid: getApiKey(),
-      units: 'metric', // Celsius
+      units: 'metric',
+      format: 'json',
     },
   });
 };
 
 // Get current weather by city name
 export const getCurrentWeatherByCity = async (cityName: string): Promise<ApiResponse<WeatherData>> => {
-  return apiRequest<WeatherData>(weatherApi, {
+  // For demo purposes, return mock data if API is not available
+  if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
+    return {
+      data: getMockWeatherData({ lat: 0, lon: 0, name: cityName }),
+      success: true,
+    };
+  }
+
+  return apiRequest<WeatherData>(tomorrowWeatherApi, {
     method: 'GET',
-    url: '/weather',
+    url: 'weather/realtime',
     params: {
-      q: cityName,
-      appid: getApiKey(),
+      city: cityName,
+      units: 'metric',
+      format: 'json',
+    },
+  });
+};
+
+// Get weather forecast by location coordinates
+export const getWeatherForecast = async (
+  location: Location, 
+  timesteps: '1h' | '1d' = '1h'
+): Promise<ApiResponse<ForecastData>> => {
+  // For demo purposes, return mock data if API is not available
+  if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
+    const intervals = Array.from({ length: timesteps === '1h' ? 24 : 7 }, (_, i) => {
+      const time = new Date();
+      if (timesteps === '1h') {
+        time.setHours(time.getHours() + i);
+      } else {
+        time.setDate(time.getDate() + i);
+      }
+      
+      return {
+        time: time.toISOString(),
+        temperature: Math.floor(Math.random() * 35) + 5,
+        feelsLike: Math.floor(Math.random() * 35) + 5,
+        humidity: Math.floor(Math.random() * 60) + 30,
+        cloudCover: Math.floor(Math.random() * 100),
+        precipitationChance: Math.floor(Math.random() * 100),
+        windSpeed: Math.random() * 10 + 2,
+        uvIndex: Math.floor(Math.random() * 11),
+        sunrise: timesteps === '1d' ? '06:30' : undefined,
+        sunset: timesteps === '1d' ? '18:45' : undefined,
+        weatherCode: 1000,
+        description: 'Clear sky',
+      };
+    });
+
+    return {
+      data: {
+        location: location || { lat: 40.7128, lon: -74.0060, name: 'Demo Location' },
+        timestep: timesteps,
+        intervals,
+      },
+      success: true,
+    };
+  }
+
+  return apiRequest<ForecastData>(tomorrowWeatherApi, {
+    method: 'GET',
+    url: 'weather/forecast',
+    params: {
+      lat: location.lat,
+      lon: location.lon,
+      timesteps,
+      units: 'metric',
+    },
+  });
+};
+
+// Get weather forecast by city name
+export const getWeatherForecastByCity = async (
+  cityName: string, 
+  timesteps: '1h' | '1d' = '1h'
+): Promise<ApiResponse<ForecastData>> => {
+  // For demo purposes, return mock data if API is not available
+  if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
+    const intervals = Array.from({ length: timesteps === '1h' ? 24 : 7 }, (_, i) => {
+      const time = new Date();
+      if (timesteps === '1h') {
+        time.setHours(time.getHours() + i);
+      } else {
+        time.setDate(time.getDate() + i);
+      }
+      
+      return {
+        time: time.toISOString(),
+        temperature: Math.floor(Math.random() * 35) + 5,
+        feelsLike: Math.floor(Math.random() * 35) + 5,
+        humidity: Math.floor(Math.random() * 60) + 30,
+        cloudCover: Math.floor(Math.random() * 100),
+        precipitationChance: Math.floor(Math.random() * 100),
+        windSpeed: Math.random() * 10 + 2,
+        uvIndex: Math.floor(Math.random() * 11),
+        sunrise: timesteps === '1d' ? '06:30' : undefined,
+        sunset: timesteps === '1d' ? '18:45' : undefined,
+        weatherCode: 1000,
+        description: 'Clear sky',
+      };
+    });
+
+    return {
+      data: {
+        location: { lat: 0, lon: 0, name: cityName },
+        timestep: timesteps,
+        intervals,
+      },
+      success: true,
+    };
+  }
+
+  return apiRequest<ForecastData>(tomorrowWeatherApi, {
+    method: 'GET',
+    url: 'weather/forecast',
+    params: {
+      city: cityName,
+      timesteps,
       units: 'metric',
     },
   });
@@ -65,39 +179,12 @@ export const getWeatherByCoordinates = async (lat: number, lon: number): Promise
   return getCurrentWeather({ lat, lon });
 };
 
-// Geocoding service to convert city names to coordinates
-export const geocodeCity = async (cityName: string): Promise<ApiResponse<Location[]>> => {
-  return apiRequest<Location[]>(weatherApi, {
-    method: 'GET',
-    url: '/geo/1.0/direct',
-    params: {
-      q: cityName,
-      limit: 5,
-      appid: getApiKey(),
-    },
-  });
-};
-
-// Reverse geocoding to get city name from coordinates
-export const reverseGeocode = async (lat: number, lon: number): Promise<ApiResponse<Location[]>> => {
-  return apiRequest<Location[]>(weatherApi, {
-    method: 'GET',
-    url: '/geo/1.0/reverse',
-    params: {
-      lat,
-      lon,
-      limit: 1,
-      appid: getApiKey(),
-    },
-  });
-};
-
 // Weather service object for backward compatibility (optional)
 export const weatherService = {
   getCurrentWeather,
   getCurrentWeatherByCity,
   getWeatherByCoordinates,
-  geocodeCity,
-  reverseGeocode,
+  getWeatherForecast,
+  getWeatherForecastByCity,
   getMockWeatherData,
 };

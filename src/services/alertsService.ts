@@ -6,41 +6,77 @@ const getMockAlerts = (): Alert[] => {
   return [
     {
       id: '1',
-      location: 'New York, NY',
-      locationCoords: { lat: 40.7128, lon: -74.0060 },
+      _id: '507f1f77bcf86cd799439011',
+      type: 'realtime',
       parameter: 'temperature',
+      operator: '>',
       threshold: 30,
-      isTriggered: true,
+      location: {
+        lat: 40.7128,
+        lon: -74.0060,
+        city: 'New York, NY',
+      },
+      name: 'NYC Heat Alert',
+      description: 'Alert when temperature exceeds 30°C in New York',
       createdAt: '2024-01-15T10:00:00Z',
-      lastTriggered: '2024-01-20T14:30:00Z',
+      updatedAt: '2024-01-20T14:30:00Z',
+      lastState: 'triggered',
     },
     {
       id: '2',
-      location: 'London, UK',
-      locationCoords: { lat: 51.5074, lon: -0.1278 },
+      _id: '507f1f77bcf86cd799439012',
+      type: 'forecast',
       parameter: 'humidity',
+      operator: '>=',
       threshold: 80,
-      isTriggered: false,
+      location: {
+        lat: 51.5074,
+        lon: -0.1278,
+        city: 'London, UK',
+      },
+      timestep: '1h',
+      name: 'London Humidity Alert',
+      description: 'Alert when humidity reaches 80% or higher',
       createdAt: '2024-01-10T09:15:00Z',
+      updatedAt: '2024-01-10T09:15:00Z',
+      lastState: 'not_triggered',
     },
     {
       id: '3',
-      location: 'Tokyo, Japan',
-      locationCoords: { lat: 35.6762, lon: 139.6503 },
+      _id: '507f1f77bcf86cd799439013',
+      type: 'realtime',
       parameter: 'wind_speed',
+      operator: '>',
       threshold: 15,
-      isTriggered: true,
+      location: {
+        lat: 35.6762,
+        lon: 139.6503,
+        city: 'Tokyo, Japan',
+      },
+      name: 'Tokyo Wind Alert',
+      description: 'High wind speed alert for Tokyo',
       createdAt: '2024-01-12T16:45:00Z',
-      lastTriggered: '2024-01-19T11:20:00Z',
+      updatedAt: '2024-01-19T11:20:00Z',
+      lastState: 'triggered',
     },
     {
       id: '4',
-      location: 'Sydney, Australia',
-      locationCoords: { lat: -33.8688, lon: 151.2093 },
+      _id: '507f1f77bcf86cd799439014',
+      type: 'forecast',
       parameter: 'pressure',
+      operator: '<',
       threshold: 1000,
-      isTriggered: false,
+      location: {
+        lat: -33.8688,
+        lon: 151.2093,
+        city: 'Sydney, Australia',
+      },
+      timestep: '1d',
+      name: 'Sydney Pressure Drop',
+      description: 'Low pressure alert for Sydney',
       createdAt: '2024-01-18T12:30:00Z',
+      updatedAt: '2024-01-18T12:30:00Z',
+      lastState: 'not_triggered',
     },
   ];
 };
@@ -67,12 +103,18 @@ export const createAlert = async (alertData: CreateAlertRequest): Promise<ApiRes
   if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
     const newAlert: Alert = {
       id: Date.now().toString(),
-      location: alertData.location,
-      locationCoords: alertData.locationCoords,
+      _id: new Date().getTime().toString(16) + Math.random().toString(16).substr(2, 8),
+      type: alertData.type,
       parameter: alertData.parameter,
+      operator: alertData.operator,
       threshold: alertData.threshold,
-      isTriggered: Math.random() > 0.7, // Random trigger state for demo
+      location: alertData.location,
+      timestep: alertData.timestep,
+      name: alertData.name,
+      description: alertData.description,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      lastState: Math.random() > 0.7 ? 'triggered' : 'not_triggered', // Random state for demo
     };
     
     return {
@@ -111,7 +153,7 @@ export const getAlertsSnapshot = async (): Promise<ApiResponse<AlertSnapshot>> =
   // For demo purposes, return mock data
   if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
     const alerts = getMockAlerts();
-    const triggeredAlerts = alerts.filter(alert => alert.isTriggered);
+    const triggeredAlerts = alerts.filter(alert => alert.lastState === 'triggered');
     
     return {
       data: {
@@ -130,13 +172,6 @@ export const getAlertsSnapshot = async (): Promise<ApiResponse<AlertSnapshot>> =
   });
 };
 
-// Check a specific alert against current weather
-export const checkAlert = async (alertId: string): Promise<ApiResponse<Alert>> => {
-  return apiRequest<Alert>(alertsApi, {
-    method: 'POST',
-    url: `/alerts/${alertId}/check`,
-  });
-};
 
 // Alerts service object for backward compatibility (optional)
 export const alertsService = {
@@ -145,5 +180,4 @@ export const alertsService = {
   updateAlert,
   deleteAlert,
   getAlertsSnapshot,
-  checkAlert,
 };

@@ -48,6 +48,27 @@ export const ALERT_PARAMETERS: Record<AlertParameter, {
     max: 50,
     step: 0.1,
   },
+  precipitation: {
+    label: 'Precipitation',
+    unit: 'mm',
+    min: 0,
+    max: 200,
+    step: 0.1,
+  },
+  cloud_cover: {
+    label: 'Cloud Cover',
+    unit: '%',
+    min: 0,
+    max: 100,
+    step: 1,
+  },
+  uv_index: {
+    label: 'UV Index',
+    unit: '',
+    min: 0,
+    max: 15,
+    step: 1,
+  },
 };
 
 // Default/fallback locations

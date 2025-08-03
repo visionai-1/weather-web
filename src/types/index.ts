@@ -1,31 +1,41 @@
 // Global TypeScript interfaces and types
 
-export interface Weather {
-  id: number;
-  main: string;
-  description: string;
-  icon: string;
-}
-
-export interface MainWeatherData {
-  temp: number;
-  feels_like: number;
-  temp_min: number;
-  temp_max: number;
-  pressure: number;
-  humidity: number;
-}
-
 export interface WeatherData {
-  weather: Weather[];
-  main: MainWeatherData;
-  visibility: number;
-  wind: {
-    speed: number;
-    deg: number;
+  location: Location;
+  timestamp?: Date | string;
+  temperature: number;
+  humidity: number;
+  windSpeed: number;
+  windDirection: number;
+  precipitation: {
+    intensity: number;
+    probability: number;
   };
-  name: string;
-  country: string;
+  visibility: number;
+  uvIndex?: number;
+  cloudCover?: number;
+  pressure?: number;
+  weatherCode?: number;
+  description?: string;
+}
+
+export interface ForecastData {
+  location: Location;
+  timestep: '1d' | '1h';
+  intervals: Array<{
+    time: Date | string;
+    temperature: number;              // hourly: temperature, daily: max temp
+    feelsLike: number;               // hourly: apparent, daily: max apparent
+    humidity: number;                // avg humidity
+    cloudCover: number;              // avg cloud cover
+    precipitationChance: number;     // max precipitation probability
+    windSpeed: number;               // avg wind speed
+    uvIndex: number;                 // max uv
+    sunrise?: string;                // only in daily
+    sunset?: string;                 // only in daily
+    weatherCode: number;
+    description: string;
+  }>;
 }
 
 export interface Location {
@@ -34,15 +44,28 @@ export interface Location {
   name?: string;
 }
 
+export type AlertOperator = '>' | '<' | '>=' | '<=' | '==' | '!=';
+
 export interface Alert {
-  id: string;
-  location: string;
-  locationCoords?: Location;
-  parameter: AlertParameter;
+  _id?: string; // MongoDB ObjectId
+  id?: string; // For compatibility
+  type: 'realtime' | 'forecast';
+  parameter: string;
+  operator: AlertOperator;
   threshold: number;
-  isTriggered: boolean;
-  createdAt: string;
-  lastTriggered?: string;
+  location: LocationQuery;
+  timestep?: '1h' | '1d';
+  name?: string;
+  description?: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  lastState?: 'triggered' | 'not_triggered';
+}
+
+export interface LocationQuery {
+  lat?: number;
+  lon?: number;
+  city?: string;
 }
 
 export type AlertParameter = 
@@ -50,13 +73,21 @@ export type AlertParameter =
   | 'humidity' 
   | 'wind_speed'
   | 'pressure'
-  | 'visibility';
+  | 'visibility'
+  | 'precipitation'
+  | 'cloud_cover'
+  | 'uv_index';
+
 
 export interface CreateAlertRequest {
-  location: string;
-  locationCoords?: Location;
-  parameter: AlertParameter;
+  type: 'realtime' | 'forecast';
+  parameter: string;
+  operator: '>' | '<' | '>=' | '<=' | '==' | '!=';
   threshold: number;
+  location: LocationQuery;
+  timestep?: '1h' | '1d';
+  name?: string;
+  description?: string;
 }
 
 export interface AlertSnapshot {

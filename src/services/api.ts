@@ -41,7 +41,8 @@ const createApiInstance = (baseURL: string): AxiosInstance => {
 
 // API instances
 export const weatherApi = createApiInstance(import.meta.env.VITE_WEATHER_API_URL || 'https://api.openweathermap.org/data/2.5');
-export const alertsApi = createApiInstance(import.meta.env.VITE_ALERTS_API_URL || 'http://localhost:3001/api');
+export const alertsApi = createApiInstance(import.meta.env.VITE_ALERTS_API_URL || 'http://localhost:3001/api/v1');
+export const tomorrowWeatherApi = createApiInstance(import.meta.env.VITE_TOMORROW_WEATHER_API_URL || 'http://localhost:3000/api/v1');
 
 // Generic API helper functions
 export const apiRequest = async <T>(

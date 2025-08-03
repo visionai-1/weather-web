@@ -81,7 +81,7 @@ export const selectTotalAlerts = createSelector(
 
 export const selectTriggeredAlerts = createSelector(
   [selectAlerts],
-  (alerts) => alerts.filter(alert => alert.isTriggered)
+  (alerts) => alerts.filter(alert => alert.lastState === 'triggered')
 );
 
 export const selectTriggeredAlertsCount = createSelector(
@@ -91,7 +91,7 @@ export const selectTriggeredAlertsCount = createSelector(
 
 export const selectActiveAlerts = createSelector(
   [selectAlerts],
-  (alerts) => alerts.filter(alert => !alert.isTriggered)
+  (alerts) => alerts.filter(alert => alert.lastState !== 'triggered')
 );
 
 export const selectActiveAlertsCount = createSelector(

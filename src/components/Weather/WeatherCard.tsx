@@ -6,7 +6,6 @@ import type { WeatherData } from '@/types';
 import { 
   formatTemperature, 
   formatDate, 
-  getWeatherIconUrl, 
   capitalize 
 } from '@/utils/formatters';
 import { StyledCard, StyledButton } from '@/components/common';
@@ -52,11 +51,7 @@ const MainWeatherInfo = styled.div`
   }
 `;
 
-const WeatherIcon = styled.img`
-  width: 100px;
-  height: 100px;
-  object-fit: contain;
-`;
+
 
 const TemperatureInfo = styled.div`
   .main-temp {
@@ -67,15 +62,10 @@ const TemperatureInfo = styled.div`
     margin-bottom: 8px;
   }
   
-  .feels-like {
+  .weather-info {
     color: ${({ theme }) => theme.colors.text.secondary};
     font-size: 14px;
     margin-bottom: 4px;
-  }
-  
-  .temp-range {
-    color: ${({ theme }) => theme.colors.text.secondary};
-    font-size: 14px;
   }
 `;
 
@@ -112,13 +102,47 @@ const UpdateInfo = styled.div`
   }
 `;
 
+// Get weather icon based on weather code (Tomorrow.io codes)
+const getWeatherIcon = (weatherCode?: number): string => {
+  if (!weatherCode) return '☀️';
+  
+  // Tomorrow.io weather codes mapping to emojis
+  const codeMap: Record<number, string> = {
+    1000: '☀️', // Clear
+    1100: '🌤️', // Mostly Clear
+    1101: '⛅', // Partly Cloudy
+    1102: '☁️', // Mostly Cloudy
+    1001: '☁️', // Cloudy
+    2000: '🌫️', // Fog
+    2100: '🌫️', // Light Fog
+    4000: '🌦️', // Drizzle
+    4001: '🌧️', // Rain
+    4200: '🌦️', // Light Rain
+    4201: '🌧️', // Heavy Rain
+    5000: '❄️', // Snow
+    5001: '🌨️', // Flurries
+    5100: '🌨️', // Light Snow
+    5101: '❄️', // Heavy Snow
+    6000: '🌨️', // Freezing Drizzle
+    6001: '🌨️', // Freezing Rain
+    6200: '🌨️', // Light Freezing Rain
+    6201: '🌨️', // Heavy Freezing Rain
+    7000: '🧊', // Ice Pellets
+    7101: '🧊', // Heavy Ice Pellets
+    7102: '🧊', // Light Ice Pellets
+    8000: '⛈️', // Thunderstorm
+  };
+  
+  return codeMap[weatherCode] || '🌤️';
+};
+
 export const WeatherCard: React.FC<WeatherCardProps> = ({
   weather,
   location,
   onRefresh,
 }) => {
-  const mainWeather = weather.weather[0];
-  const iconUrl = getWeatherIconUrl(mainWeather.icon);
+  const weatherIcon = getWeatherIcon(weather.weatherCode);
+  const timestamp = weather.timestamp ? formatDate(weather.timestamp) : formatDate(new Date());
 
   return (
     <WeatherStyledCard
@@ -144,33 +168,30 @@ export const WeatherCard: React.FC<WeatherCardProps> = ({
       }
     >
       <MainWeatherInfo>
-        <WeatherIcon 
-          src={iconUrl} 
-          alt={mainWeather.description}
-          onError={(e) => {
-            // Fallback to a default icon if the image fails to load
-            (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjBGMEYwIi8+Cjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiBmaWxsPSIjOTk5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5XZWF0aGVyPC90ZXh0Pgo8L3N2Zz4K';
-          }}
-        />
+        <div style={{ fontSize: '60px', marginRight: '16px' }}>
+          {weatherIcon}
+        </div>
         
         <TemperatureInfo>
           <div className="main-temp">
-            {formatTemperature(weather.main.temp)}
+            {formatTemperature(weather.temperature)}
           </div>
-          <div className="feels-like">
-            Feels like {formatTemperature(weather.main.feels_like)}
+          <div className="weather-info">
+            {weather.description || 'Current conditions'}
           </div>
-          <div className="temp-range">
-            {formatTemperature(weather.main.temp_min)} / {formatTemperature(weather.main.temp_max)}
-          </div>
+          {weather.uvIndex !== undefined && (
+            <div className="weather-info">
+              UV Index: {weather.uvIndex}
+            </div>
+          )}
         </TemperatureInfo>
         
         <WeatherDescription>
           <div className="condition">
-            {mainWeather.main}
+            Live Weather
           </div>
           <div className="description">
-            {capitalize(mainWeather.description)}
+            {capitalize(weather.description || 'Real-time data')}
           </div>
         </WeatherDescription>
       </MainWeatherInfo>
@@ -178,11 +199,16 @@ export const WeatherCard: React.FC<WeatherCardProps> = ({
       <Space wrap>
         <Tag color="blue">Current Conditions</Tag>
         <Tag color="green">Live Data</Tag>
+        {weather.precipitation && weather.precipitation.probability > 0 && (
+          <Tag color="orange">
+            Rain: {Math.round(weather.precipitation.probability)}%
+          </Tag>
+        )}
       </Space>
 
       <UpdateInfo>
         <div className="last-update">
-          Last updated: {formatDate(new Date())}
+          Last updated: {timestamp}
         </div>
         {onRefresh && (
           <StyledButton 

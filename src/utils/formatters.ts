@@ -30,7 +30,7 @@ export const formatVisibility = (visibility: number): string => {
 };
 
 // Generic parameter formatter
-export const formatParameter = (parameter: AlertParameter, value: number): string => {
+export const formatParameter = (parameter: string | AlertParameter, value: number): string => {
   switch (parameter) {
     case 'temperature':
       return formatTemperature(value);
@@ -42,13 +42,19 @@ export const formatParameter = (parameter: AlertParameter, value: number): strin
       return formatPressure(value);
     case 'visibility':
       return formatVisibility(value);
+    case 'precipitation':
+      return `${value.toFixed(1)} mm`;
+    case 'cloud_cover':
+      return `${value}%`;
+    case 'uv_index':
+      return value.toString();
     default:
       return value.toString();
   }
 };
 
 // Parameter labels
-export const getParameterLabel = (parameter: AlertParameter): string => {
+export const getParameterLabel = (parameter: string | AlertParameter): string => {
   switch (parameter) {
     case 'temperature':
       return 'Temperature';
@@ -60,13 +66,22 @@ export const getParameterLabel = (parameter: AlertParameter): string => {
       return 'Pressure';
     case 'visibility':
       return 'Visibility';
+    case 'precipitation':
+      return 'Precipitation';
+    case 'cloud_cover':
+      return 'Cloud Cover';
+    case 'uv_index':
+      return 'UV Index';
     default:
-      return parameter;
+      // Capitalize and format string parameters
+      return parameter.split('_').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ');
   }
 };
 
 // Parameter units
-export const getParameterUnit = (parameter: AlertParameter): string => {
+export const getParameterUnit = (parameter: string | AlertParameter): string => {
   switch (parameter) {
     case 'temperature':
       return '°C';
@@ -78,6 +93,12 @@ export const getParameterUnit = (parameter: AlertParameter): string => {
       return 'hPa';
     case 'visibility':
       return 'km';
+    case 'precipitation':
+      return 'mm';
+    case 'cloud_cover':
+      return '%';
+    case 'uv_index':
+      return '';
     default:
       return '';
   }

@@ -54,9 +54,9 @@ const getPressureStatus = (pressure: number): string => {
 };
 
 export const WeatherMetrics: React.FC<WeatherMetricsProps> = ({ weather }) => {
-  const humidityColor = getHumidityColor(weather.main.humidity);
-  const windDirection = getWindDirection(weather.wind.deg);
-  const pressureStatus = getPressureStatus(weather.main.pressure);
+  const humidityColor = getHumidityColor(weather.humidity);
+  const windDirection = getWindDirection(weather.windDirection);
+  const pressureStatus = weather.pressure ? getPressureStatus(weather.pressure) : 'N/A';
 
   return (
     <MetricsCard title="Weather Details">
@@ -65,12 +65,12 @@ export const WeatherMetrics: React.FC<WeatherMetricsProps> = ({ weather }) => {
           <MetricDisplay
             icon={<CloudOutlined />}
             label="Humidity"
-            value={formatHumidity(weather.main.humidity)}
+            value={formatHumidity(weather.humidity)}
             color={humidityColor}
           >
             <HumidityContainer>
               <Progress
-                percent={weather.main.humidity}
+                percent={weather.humidity}
                 strokeColor={humidityColor}
                 size="small"
                 showInfo={false}
@@ -84,19 +84,21 @@ export const WeatherMetrics: React.FC<WeatherMetricsProps> = ({ weather }) => {
           <MetricDisplay
             icon={<CompassOutlined />}
             label="Wind"
-            value={formatWindSpeed(weather.wind.speed)}
-            subtitle={`${windDirection} (${weather.wind.deg}°)`}
+            value={formatWindSpeed(weather.windSpeed)}
+            subtitle={`${windDirection} (${weather.windDirection}°)`}
           />
         </Col>
 
-        <Col span={24}>
-          <MetricDisplay
-            icon={<DashboardOutlined />}
-            label="Pressure"
-            value={formatPressure(weather.main.pressure)}
-            subtitle={pressureStatus}
-          />
-        </Col>
+        {weather.pressure && (
+          <Col span={24}>
+            <MetricDisplay
+              icon={<DashboardOutlined />}
+              label="Pressure"
+              value={formatPressure(weather.pressure)}
+              subtitle={pressureStatus}
+            />
+          </Col>
+        )}
 
         <Col span={24}>
           <MetricDisplay
@@ -105,6 +107,37 @@ export const WeatherMetrics: React.FC<WeatherMetricsProps> = ({ weather }) => {
             value={formatVisibility(weather.visibility)}
           />
         </Col>
+
+        {weather.cloudCover !== undefined && (
+          <Col span={24}>
+            <MetricDisplay
+              icon={<CloudOutlined />}
+              label="Cloud Cover"
+              value={`${weather.cloudCover}%`}
+            >
+              <HumidityContainer>
+                <Progress
+                  percent={weather.cloudCover}
+                  strokeColor="#87CEEB"
+                  size="small"
+                  showInfo={false}
+                  className="humidity-progress"
+                />
+              </HumidityContainer>
+            </MetricDisplay>
+          </Col>
+        )}
+
+        {weather.precipitation && (
+          <Col span={24}>
+            <MetricDisplay
+              icon={<CloudOutlined />}
+              label="Precipitation"
+              value={`${Math.round(weather.precipitation.probability)}%`}
+              subtitle={`Intensity: ${weather.precipitation.intensity.toFixed(1)} mm/h`}
+            />
+          </Col>
+        )}
       </Row>
     </MetricsCard>
   );

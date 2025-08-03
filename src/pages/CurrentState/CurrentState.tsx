@@ -128,18 +128,34 @@ const CurrentState: React.FC = () => {
                     <List.Item.Meta
                       title={
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span>{alert.location}</span>
-                          <Tag color="red">Triggered</Tag>
+                          <span>{alert.name || `${alert.parameter} Alert`}</span>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <Tag color={alert.type === 'realtime' ? 'blue' : 'orange'}>{alert.type}</Tag>
+                            <Tag color="red">Triggered</Tag>
+                          </div>
                         </div>
                       }
                       description={
                         <div>
                           <Text type="secondary">
-                            {getParameterLabel(alert.parameter)}: {alert.threshold}
+                            <strong>Location:</strong> {alert.location.city || `${alert.location.lat?.toFixed(2)}, ${alert.location.lon?.toFixed(2)}`}
                           </Text>
                           <br />
+                          <Text type="secondary">
+                            <strong>Condition:</strong> {getParameterLabel(alert.parameter)} {alert.operator} {alert.threshold}
+                            {alert.timestep && ` (${alert.timestep})`}
+                          </Text>
+                          {alert.description && (
+                            <>
+                              <br />
+                              <Text type="secondary" style={{ fontSize: '12px' }}>
+                                {alert.description}
+                              </Text>
+                            </>
+                          )}
+                          <br />
                           <Text type="secondary" style={{ fontSize: '12px' }}>
-                            Last triggered: {alert.lastTriggered ? formatRelativeTime(alert.lastTriggered) : 'Unknown'}
+                            Last updated: {alert.updatedAt ? formatRelativeTime(alert.updatedAt) : 'Unknown'}
                           </Text>
                         </div>
                       }
@@ -174,10 +190,10 @@ const CurrentState: React.FC = () => {
                     <List.Item.Meta
                       title={
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span>{alert.location}</span>
+                          <span>{alert.location.city || `${alert.location.lat?.toFixed(2)}, ${alert.location.lon?.toFixed(2)}`}</span>
                           <Badge 
-                            status={alert.isTriggered ? 'error' : 'success'} 
-                            text={alert.isTriggered ? 'Triggered' : 'Normal'}
+                            status={alert.lastState === 'triggered' ? 'error' : 'success'} 
+                            text={alert.lastState === 'triggered' ? 'Triggered' : 'Normal'}
                           />
                         </div>
                       }

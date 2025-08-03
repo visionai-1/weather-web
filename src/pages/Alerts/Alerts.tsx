@@ -18,31 +18,55 @@ const Alerts: React.FC = () => {
 
   const columns = [
     {
-      title: 'Location',
-      dataIndex: 'location',
-      key: 'location',
-      render: (location: string) => (
-        <span style={{ fontWeight: 500 }}>{location}</span>
+      title: 'Name',
+      dataIndex: 'name',
+      key: 'name',
+      render: (name: string, record: any) => (
+        <div>
+          <span style={{ fontWeight: 500 }}>{name || `${record.parameter} Alert`}</span>
+          {record.description && (
+            <div style={{ fontSize: '12px', color: '#666' }}>{record.description}</div>
+          )}
+        </div>
       ),
     },
     {
-      title: 'Parameter',
-      dataIndex: 'parameter',
-      key: 'parameter',
-      render: (parameter: any) => getParameterLabel(parameter),
+      title: 'Location',
+      dataIndex: 'location',
+      key: 'location',
+      render: (location: any) => (
+        <span style={{ fontWeight: 500 }}>
+          {location.city || `${location.lat?.toFixed(2)}, ${location.lon?.toFixed(2)}`}
+        </span>
+      ),
     },
     {
-      title: 'Threshold',
-      dataIndex: 'threshold',
-      key: 'threshold',
+      title: 'Type',
+      dataIndex: 'type',
+      key: 'type',
+      render: (type: string) => (
+        <Tag color={type === 'realtime' ? 'blue' : 'orange'}>
+          {type}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Condition',
+      key: 'condition',
+      render: (_: any, record: any) => (
+        <span>
+          {getParameterLabel(record.parameter)} {record.operator} {record.threshold}
+          {record.timestep && ` (${record.timestep})`}
+        </span>
+      ),
     },
     {
       title: 'Status',
-      dataIndex: 'isTriggered',
+      dataIndex: 'lastState',
       key: 'status',
-      render: (isTriggered: boolean) => (
-        <Tag color={isTriggered ? 'red' : 'green'}>
-          {isTriggered ? 'Triggered' : 'Normal'}
+      render: (lastState: string) => (
+        <Tag color={lastState === 'triggered' ? 'red' : 'green'}>
+          {lastState === 'triggered' ? 'Triggered' : 'Normal'}
         </Tag>
       ),
     },
@@ -61,8 +85,8 @@ const Alerts: React.FC = () => {
           danger
           size="small"
           icon={<DeleteOutlined />}
-          loading={isDeleting(record.id)}
-          onClick={() => deleteAlert(record.id)}
+          loading={isDeleting(record.id || record._id)}
+          onClick={() => deleteAlert(record.id || record._id)}
         >
           Delete
         </Button>
@@ -118,7 +142,7 @@ const Alerts: React.FC = () => {
           <Table
             columns={columns}
             dataSource={alerts}
-            rowKey="id"
+            rowKey={(record) => record.id || record._id || ''}
             pagination={{ pageSize: 10 }}
             size="middle"
           />
