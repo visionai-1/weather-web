@@ -4,14 +4,16 @@ export interface WeatherData {
   location: Location;
   timestamp?: Date | string;
   temperature: number;
-  humidity: number;
   windSpeed: number;
   windDirection: number;
   precipitation: {
     intensity: number;
     probability: number;
   };
-  visibility: number;
+  condition: string;
+  // Optional fields that may not be available from all APIs
+  humidity?: number;
+  visibility?: number;
   uvIndex?: number;
   cloudCover?: number;
   pressure?: number;
@@ -90,12 +92,7 @@ export interface CreateAlertRequest {
   description?: string;
 }
 
-export interface AlertSnapshot {
-  totalAlerts: number;
-  triggeredAlerts: number;
-  alerts: Alert[];
-  lastChecked: string;
-}
+
 
 export interface ApiResponse<T> {
   data: T;

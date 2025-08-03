@@ -6,7 +6,7 @@ import type { ApiResponse } from '@/types';
 const createApiInstance = (baseURL: string): AxiosInstance => {
   const instance = axios.create({
     baseURL,
-    timeout: 10000,
+    timeout: 50000,
     headers: {
       'Content-Type': 'application/json',
     },
@@ -15,7 +15,7 @@ const createApiInstance = (baseURL: string): AxiosInstance => {
   // Request interceptor
   instance.interceptors.request.use(
     (config: any) => {
-      console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+      console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
       return config;
     },
     (error) => {
@@ -39,10 +39,20 @@ const createApiInstance = (baseURL: string): AxiosInstance => {
   return instance;
 };
 
+// Debug environment variables
+console.log('🔍 Environment Variables Check:');
+console.log('VITE_ALERTS_API_URL:', import.meta.env.VITE_ALERTS_API_URL);
+console.log('VITE_TOMORROW_WEATHER_API_URL:', import.meta.env.VITE_TOMORROW_WEATHER_API_URL);
+
 // API instances
-export const weatherApi = createApiInstance(import.meta.env.VITE_WEATHER_API_URL || 'https://api.openweathermap.org/data/2.5');
-export const alertsApi = createApiInstance(import.meta.env.VITE_ALERTS_API_URL || 'http://localhost:3001/api/v1');
-export const tomorrowWeatherApi = createApiInstance(import.meta.env.VITE_TOMORROW_WEATHER_API_URL || 'http://localhost:3000/api/v1');
+const alertsApiUrl = import.meta.env.VITE_ALERTS_API_URL || 'http://localhost:3001/api/v1';
+const weatherApiUrl = import.meta.env.VITE_TOMORROW_WEATHER_API_URL || 'http://localhost:3000/api/v1';
+
+console.log('🔧 Using Alerts API URL:', alertsApiUrl);
+console.log('🔧 Using Weather API URL:', weatherApiUrl);
+
+export const alertsApi = createApiInstance(alertsApiUrl);
+export const tomorrowWeatherApi = createApiInstance(weatherApiUrl);
 
 // Generic API helper functions
 export const apiRequest = async <T>(
@@ -51,10 +61,8 @@ export const apiRequest = async <T>(
 ): Promise<ApiResponse<T>> => {
   try {
     const response = await instance(config);
-    return {
-      data: response.data,
-      success: true,
-    };
+    // API response already has {success, data, message} format
+    return response.data as ApiResponse<T>;
   } catch (error: any) {
     return {
       data: {} as T,
@@ -62,14 +70,4 @@ export const apiRequest = async <T>(
       message: error.response?.data?.message || error.message || 'An error occurred',
     };
   }
-};
-
-// Weather API helpers
-export const getWeatherApiKey = (): string => {
-  const apiKey = import.meta.env.VITE_OPENWEATHER_API_KEY;
-  if (!apiKey) {
-    console.warn('⚠️ OpenWeather API key not found. Please set VITE_OPENWEATHER_API_KEY in your .env file');
-    return 'demo_key'; // For development purposes
-  }
-  return apiKey;
 };

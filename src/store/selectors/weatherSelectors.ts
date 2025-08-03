@@ -1,83 +1,51 @@
 import { createSelector } from '@reduxjs/toolkit';
-import type { RootState } from '../index';
+import type { RootState } from '@/store';
 
-// Base selectors
-const selectWeatherState = (state: RootState) => state.weather;
+// Basic selectors (simplified)
+export const selectWeatherState = (state: RootState) => state.weather;
 
-// Location selectors
-export const selectCurrentLocation = createSelector(
-  [selectWeatherState],
-  (weather) => weather.currentLocation
-);
+// Data selectors
+export const selectCurrentLocation = (state: RootState) => state.weather.currentLocation;
+export const selectCurrentWeather = (state: RootState) => state.weather.currentWeather;
+export const selectForecast = (state: RootState) => state.weather.forecast;
+export const selectSearchCity = (state: RootState) => state.weather.searchCity;
+export const selectSearchWeather = (state: RootState) => state.weather.searchWeather;
 
+// Loading and error selectors (simplified)
+export const selectWeatherIsLoading = (state: RootState) => state.weather.isLoading;
+export const selectWeatherError = (state: RootState) => state.weather.error;
+export const selectWeatherCurrentOperation = (state: RootState) => state.weather.currentOperation;
+
+// Specific operation loading states
 export const selectLocationLoading = createSelector(
-  [selectWeatherState],
-  (weather) => weather.locationLoading
-);
-
-export const selectLocationError = createSelector(
-  [selectWeatherState],
-  (weather) => weather.locationError
-);
-
-export const selectLastLocationUpdate = createSelector(
-  [selectWeatherState],
-  (weather) => weather.lastLocationUpdate
-);
-
-// Weather selectors
-export const selectCurrentWeather = createSelector(
-  [selectWeatherState],
-  (weather) => weather.currentWeather
+  [selectWeatherIsLoading, selectWeatherCurrentOperation],
+  (isLoading, operation) => isLoading && operation === 'location'
 );
 
 export const selectWeatherLoading = createSelector(
-  [selectWeatherState],
-  (weather) => weather.weatherLoading
-);
-
-export const selectWeatherError = createSelector(
-  [selectWeatherState],
-  (weather) => weather.weatherError
-);
-
-export const selectLastWeatherUpdate = createSelector(
-  [selectWeatherState],
-  (weather) => weather.lastWeatherUpdate
-);
-
-// Search selectors
-export const selectSearchCity = createSelector(
-  [selectWeatherState],
-  (weather) => weather.searchCity
-);
-
-export const selectSearchWeather = createSelector(
-  [selectWeatherState],
-  (weather) => weather.searchWeather
+  [selectWeatherIsLoading, selectWeatherCurrentOperation],
+  (isLoading, operation) => isLoading && operation === 'weather'
 );
 
 export const selectSearchLoading = createSelector(
-  [selectWeatherState],
-  (weather) => weather.searchLoading
+  [selectWeatherIsLoading, selectWeatherCurrentOperation],
+  (isLoading, operation) => isLoading && operation === 'search'
 );
 
-export const selectSearchError = createSelector(
-  [selectWeatherState],
-  (weather) => weather.searchError
+export const selectForecastLoading = createSelector(
+  [selectWeatherIsLoading, selectWeatherCurrentOperation],
+  (isLoading, operation) => isLoading && operation === 'forecast'
 );
 
-// Computed selectors
-export const selectWeatherIsLoading = createSelector(
-  [selectLocationLoading, selectWeatherLoading, selectSearchLoading],
-  (locationLoading, weatherLoading, searchLoading) => 
-    locationLoading || weatherLoading || searchLoading
-);
-
+// Derived selectors
 export const selectWeatherHasError = createSelector(
-  [selectLocationError, selectWeatherError, selectSearchError],
-  (locationError, weatherError, searchError) => 
-    !!locationError || !!weatherError || !!searchError
+  [selectWeatherError],
+  (error) => !!error
+);
+
+export const selectIsSearchActive = createSelector(
+  [selectSearchWeather],
+  (searchWeather) => !!searchWeather
 );
 
 export const selectDisplayWeather = createSelector(
@@ -86,47 +54,16 @@ export const selectDisplayWeather = createSelector(
 );
 
 export const selectDisplayLocation = createSelector(
-  [selectSearchCity, selectCurrentLocation],
-  (searchCity, currentLocation) => 
-    searchCity || currentLocation?.name || 'Unknown Location'
-);
-
-export const selectIsLocationReady = createSelector(
-  [selectCurrentLocation, selectLocationLoading],
-  (location, loading) => !!location && !loading
-);
-
-export const selectIsWeatherReady = createSelector(
-  [selectCurrentWeather, selectWeatherLoading],
-  (weather, loading) => !!weather && !loading
-);
-
-export const selectIsSearchActive = createSelector(
-  [selectSearchCity, selectSearchWeather],
-  (searchCity, searchWeather) => !!searchCity || !!searchWeather
-);
-
-export const selectShouldRefreshWeather = createSelector(
-  [selectCurrentLocation, selectWeatherLoading, selectLastWeatherUpdate],
-  (location, loading, lastUpdate) => {
-    if (!location || loading) return false;
-    if (!lastUpdate) return true;
-    return Date.now() - lastUpdate > 5 * 60 * 1000; // 5 minutes
+  [selectSearchWeather, selectCurrentLocation],
+  (searchWeather, currentLocation) => {
+    if (searchWeather) return searchWeather.location;
+    return currentLocation;
   }
 );
 
-export const selectWeatherAge = createSelector(
-  [selectLastWeatherUpdate],
-  (lastUpdate) => {
-    if (!lastUpdate) return null;
-    return Date.now() - lastUpdate;
-  }
-);
-
-export const selectLocationAge = createSelector(
-  [selectLastLocationUpdate],
-  (lastUpdate) => {
-    if (!lastUpdate) return null;
-    return Date.now() - lastUpdate;
-  }
-);
+// Combined loading states (backward compatibility)
+export const selectIsLoading = selectWeatherIsLoading;
+export const selectHasError = selectWeatherHasError;
+export const selectError = selectWeatherError;
+export const selectLocationError = selectWeatherError;
+export const selectSearchError = selectWeatherError;

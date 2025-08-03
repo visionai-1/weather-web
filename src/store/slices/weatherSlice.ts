@@ -1,57 +1,52 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
-import type { WeatherData, Location } from '@/types';
-import { getCurrentWeather, getCurrentWeatherByCity, getMockWeatherData } from '@/services/weatherService';
-import { getCurrentPosition } from '@/utils/geolocation';
+import type { WeatherData, Location, ForecastData } from '@/types';
+import { getCurrentWeather, getCurrentWeatherByCity, getWeatherForecast } from '@/services/weatherService';
+import { getCurrentLocation } from '@/services/locationService';
 
-// State interface
+// Simplified state interface
 interface WeatherState {
-  // Current location and weather
+  // Data
   currentLocation: Location | null;
   currentWeather: WeatherData | null;
-  
-  // Search weather by city
+  forecast: ForecastData | null;
   searchCity: string;
   searchWeather: WeatherData | null;
   
-  // Loading states
-  locationLoading: boolean;
-  weatherLoading: boolean;
-  searchLoading: boolean;
+  // Simple loading and error states
+  isLoading: boolean;
+  error: string | null;
   
-  // Error states
-  locationError: string | null;
-  weatherError: string | null;
-  searchError: string | null;
-  
-  // Last updated timestamps
-  lastLocationUpdate: number | null;
-  lastWeatherUpdate: number | null;
+  // Operation tracking (simplified)
+  currentOperation: 'location' | 'weather' | 'forecast' | 'search' | null;
 }
 
 // Initial state
 const initialState: WeatherState = {
   currentLocation: null,
   currentWeather: null,
+  forecast: null,
   searchCity: '',
   searchWeather: null,
-  locationLoading: false,
-  weatherLoading: false,
-  searchLoading: false,
-  locationError: null,
-  weatherError: null,
-  searchError: null,
-  lastLocationUpdate: null,
-  lastWeatherUpdate: null,
+  isLoading: false,
+  error: null,
+  currentOperation: null,
 };
 
-// Async thunks
+// Async thunks (simplified - no complex deduplication)
 export const fetchCurrentLocation = createAsyncThunk(
   'weather/fetchCurrentLocation',
   async (_, { rejectWithValue }) => {
     try {
-      const position = await getCurrentPosition();
-      return position;
+      console.log('🌍 Fetching location...');
+      const response = await getCurrentLocation();
+      
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to get location');
+      }
+      
+      return response.data;
     } catch (error: any) {
+      console.error('❌ Location error:', error.message);
       return rejectWithValue(error.message);
     }
   }
@@ -59,15 +54,9 @@ export const fetchCurrentLocation = createAsyncThunk(
 
 export const fetchCurrentWeather = createAsyncThunk(
   'weather/fetchCurrentWeather',
-  async (location: Location, { rejectWithValue, getState }) => {
+  async (location: Location, { rejectWithValue }) => {
     try {
-      const state = getState() as { weather: WeatherState };
-      
-      // Don't refetch if we have recent data (less than 5 minutes old)
-      if (state.weather.lastWeatherUpdate && Date.now() - state.weather.lastWeatherUpdate < 5 * 60 * 1000) {
-        return state.weather.currentWeather;
-      }
-      
+      console.log('☀️ Fetching weather for:', location.name);
       const response = await getCurrentWeather(location);
       
       if (!response.success) {
@@ -76,7 +65,26 @@ export const fetchCurrentWeather = createAsyncThunk(
       
       return response.data;
     } catch (error: any) {
-      console.warn('Weather API failed, using mock data:', error.message);
+      console.error('❌ Weather error:', error.message);
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+export const fetchWeatherForecast = createAsyncThunk(
+  'weather/fetchWeatherForecast',
+  async (location: Location, { rejectWithValue }) => {
+    try {
+      console.log('📊 Fetching forecast for:', location.name);
+      const response = await getWeatherForecast(location, '1h'); // Hourly forecast
+      
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch weather forecast');
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Forecast error:', error.message);
       return rejectWithValue(error.message);
     }
   }
@@ -84,19 +92,13 @@ export const fetchCurrentWeather = createAsyncThunk(
 
 export const searchWeatherByCity = createAsyncThunk(
   'weather/searchWeatherByCity',
-  async (cityName: string, { rejectWithValue, getState }) => {
+  async (cityName: string, { rejectWithValue }) => {
     try {
       if (!cityName || cityName.length < 2) {
         throw new Error('City name too short');
       }
       
-      const state = getState() as { weather: WeatherState };
-      
-      // Prevent multiple simultaneous search requests
-      if (state.weather.searchLoading) {
-        throw new Error('Search already in progress');
-      }
-      
+      console.log('🔍 Searching weather for:', cityName);
       const response = await getCurrentWeatherByCity(cityName);
       
       if (!response.success) {
@@ -105,13 +107,13 @@ export const searchWeatherByCity = createAsyncThunk(
       
       return { cityName, weather: response.data };
     } catch (error: any) {
-      console.warn('City weather API failed, using mock data:', error.message);
+      console.error('❌ Search error:', error.message);
       return rejectWithValue({ error: error.message, cityName });
     }
   }
 );
 
-// Weather slice
+// Weather slice (simplified)
 export const weatherSlice = createSlice({
   name: 'weather',
   initialState,
@@ -119,78 +121,102 @@ export const weatherSlice = createSlice({
     clearSearch: (state) => {
       state.searchCity = '';
       state.searchWeather = null;
-      state.searchError = null;
+      state.error = null;
     },
-    refreshLocation: (state) => {
-      state.lastLocationUpdate = null;
-      state.lastWeatherUpdate = null;
+    clearError: (state) => {
+      state.error = null;
+    },
+    clearForecast: (state) => {
+      state.forecast = null;
     },
     setSearchCity: (state, action: PayloadAction<string>) => {
       state.searchCity = action.payload;
     },
   },
   extraReducers: (builder) => {
-    // Fetch current location
+    // Location
     builder
       .addCase(fetchCurrentLocation.pending, (state) => {
-        state.locationLoading = true;
-        state.locationError = null;
+        state.isLoading = true;
+        state.error = null;
+        state.currentOperation = 'location';
       })
       .addCase(fetchCurrentLocation.fulfilled, (state, action) => {
-        state.locationLoading = false;
+        state.isLoading = false;
         state.currentLocation = action.payload;
-        state.locationError = null;
-        state.lastLocationUpdate = Date.now();
+        state.currentOperation = null;
       })
       .addCase(fetchCurrentLocation.rejected, (state, action) => {
-        state.locationLoading = false;
-        state.locationError = action.payload as string;
+        state.isLoading = false;
+        state.error = action.payload as string;
+        state.currentOperation = null;
         // Set fallback location
         state.currentLocation = { lat: 40.7128, lon: -74.0060, name: 'New York, NY (fallback)' };
-        state.lastLocationUpdate = Date.now();
       });
 
-    // Fetch current weather
+    // Weather
     builder
       .addCase(fetchCurrentWeather.pending, (state) => {
-        state.weatherLoading = true;
-        state.weatherError = null;
+        state.isLoading = true;
+        state.error = null;
+        state.currentOperation = 'weather';
       })
       .addCase(fetchCurrentWeather.fulfilled, (state, action) => {
-        state.weatherLoading = false;
+        state.isLoading = false;
         state.currentWeather = action.payload;
-        state.weatherError = null;
-        state.lastWeatherUpdate = Date.now();
+        state.currentOperation = null;
       })
       .addCase(fetchCurrentWeather.rejected, (state, action) => {
-        state.weatherLoading = false;
-        state.weatherError = action.payload as string;
-        // Set mock weather data as fallback
-        state.currentWeather = getMockWeatherData(state.currentLocation || undefined);
-        state.lastWeatherUpdate = Date.now();
+        state.isLoading = false;
+        state.error = action.payload as string;
+        state.currentOperation = null;
       });
 
-    // Search weather by city
+    // Forecast
+    builder
+      .addCase(fetchWeatherForecast.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+        state.currentOperation = 'forecast';
+      })
+      .addCase(fetchWeatherForecast.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.forecast = action.payload;
+        state.currentOperation = null;
+      })
+      .addCase(fetchWeatherForecast.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+        state.currentOperation = null;
+      });
+
+    // Search
     builder
       .addCase(searchWeatherByCity.pending, (state) => {
-        state.searchLoading = true;
-        state.searchError = null;
+        state.isLoading = true;
+        state.error = null;
+        state.currentOperation = 'search';
       })
       .addCase(searchWeatherByCity.fulfilled, (state, action) => {
-        state.searchLoading = false;
+        state.isLoading = false;
         state.searchCity = action.payload.cityName;
         state.searchWeather = action.payload.weather;
-        state.searchError = null;
+        state.currentOperation = null;
       })
       .addCase(searchWeatherByCity.rejected, (state, action) => {
-        state.searchLoading = false;
+        state.isLoading = false;
         const payload = action.payload as { error: string; cityName: string };
-        state.searchError = payload.error;
+        state.error = payload.error;
         state.searchCity = payload.cityName;
-        // Set mock weather data for search
-        state.searchWeather = getMockWeatherData({ lat: 0, lon: 0, name: payload.cityName });
+        state.searchWeather = null;
+        state.currentOperation = null;
       });
   },
 });
 
-export const { clearSearch, refreshLocation, setSearchCity } = weatherSlice.actions;
+export const { 
+  clearSearch, 
+  clearError: clearWeatherError,
+  clearForecast,
+  setSearchCity 
+} = weatherSlice.actions;

@@ -1,60 +1,37 @@
-import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
-import type { Alert, AlertSnapshot, CreateAlertRequest } from '@/types';
-import { getAlerts, createAlert, deleteAlert, getAlertsSnapshot } from '@/services/alertsService';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import type { Alert, CreateAlertRequest } from '@/types';
+import { getAlerts, createAlert, deleteAlert } from '@/services/alertsService';
 import { message } from 'antd';
 
-// State interface
+// Simplified state interface (no snapshots)
 interface AlertsState {
-  // Alerts list
+  // Data
   alerts: Alert[];
-  alertsLoading: boolean;
-  alertsError: string | null;
   
-  // Alerts snapshot (current state)
-  snapshot: AlertSnapshot | null;
-  snapshotLoading: boolean;
-  snapshotError: string | null;
+  // Simple loading and error states
+  isLoading: boolean;
+  error: string | null;
   
-  // Operations loading
-  creating: boolean;
-  deleting: Record<string, boolean>; // alertId -> isDeleting
-  
-  // Last updated timestamps
-  lastAlertsUpdate: number | null;
-  lastSnapshotUpdate: number | null;
+  // Operation tracking (simplified)
+  currentOperation: 'alerts' | 'create' | 'delete' | null;
+  deletingId: string | null; // Track which alert is being deleted
 }
 
 // Initial state
 const initialState: AlertsState = {
   alerts: [],
-  alertsLoading: false,
-  alertsError: null,
-  snapshot: null,
-  snapshotLoading: false,
-  snapshotError: null,
-  creating: false,
-  deleting: {},
-  lastAlertsUpdate: null,
-  lastSnapshotUpdate: null,
+  isLoading: false,
+  error: null,
+  currentOperation: null,
+  deletingId: null,
 };
 
-// Async thunks
+// Async thunks (simplified - no snapshots)
 export const fetchAlerts = createAsyncThunk(
   'alerts/fetchAlerts',
-  async (_, { rejectWithValue, getState }) => {
+  async (_, { rejectWithValue }) => {
     try {
-      const state = getState() as { alerts: AlertsState };
-      
-      // If already loading, return current alerts instead of throwing error
-      if (state.alerts.alertsLoading) {
-        return state.alerts.alerts;
-      }
-      
-      // Don't refetch if we have recent data (less than 2 minutes old)
-      if (state.alerts.lastAlertsUpdate && Date.now() - state.alerts.lastAlertsUpdate < 2 * 60 * 1000) {
-        return state.alerts.alerts;
-      }
-      
+      console.log('📋 Fetching alerts...');
       const response = await getAlerts();
       
       if (!response.success) {
@@ -63,35 +40,7 @@ export const fetchAlerts = createAsyncThunk(
       
       return response.data;
     } catch (error: any) {
-      return rejectWithValue(error.message);
-    }
-  }
-);
-
-export const fetchAlertsSnapshot = createAsyncThunk(
-  'alerts/fetchAlertsSnapshot',
-  async (_, { rejectWithValue, getState }) => {
-    try {
-      const state = getState() as { alerts: AlertsState };
-      
-      // If already loading, return current snapshot instead of throwing error
-      if (state.alerts.snapshotLoading) {
-        return state.alerts.snapshot;
-      }
-      
-      // Don't refetch if we have recent data (less than 30 seconds old)
-      if (state.alerts.lastSnapshotUpdate && Date.now() - state.alerts.lastSnapshotUpdate < 30 * 1000) {
-        return state.alerts.snapshot;
-      }
-      
-      const response = await getAlertsSnapshot();
-      
-      if (!response.success) {
-        throw new Error(response.message || 'Failed to fetch alerts snapshot');
-      }
-      
-      return response.data;
-    } catch (error: any) {
+      console.error('❌ Alerts fetch error:', error.message);
       return rejectWithValue(error.message);
     }
   }
@@ -99,15 +48,9 @@ export const fetchAlertsSnapshot = createAsyncThunk(
 
 export const createNewAlert = createAsyncThunk(
   'alerts/createNewAlert',
-  async (alertData: CreateAlertRequest, { rejectWithValue, getState, dispatch }) => {
+  async (alertData: CreateAlertRequest, { rejectWithValue }) => {
     try {
-      const state = getState() as { alerts: AlertsState };
-      
-      // Prevent multiple simultaneous create operations
-      if (state.alerts.creating) {
-        return rejectWithValue('Alert creation already in progress');
-      }
-      
+      console.log('🚨 Creating alert:', alertData.name);
       const response = await createAlert(alertData);
       
       if (!response.success) {
@@ -116,11 +59,9 @@ export const createNewAlert = createAsyncThunk(
       
       message.success('Alert created successfully!');
       
-      // Refresh snapshot after creating (but don't wait for it)
-      setTimeout(() => dispatch(fetchAlertsSnapshot()), 100);
-      
       return response.data;
     } catch (error: any) {
+      console.error('❌ Create alert error:', error.message);
       message.error(error.message || 'Failed to create alert');
       return rejectWithValue(error.message);
     }
@@ -129,15 +70,9 @@ export const createNewAlert = createAsyncThunk(
 
 export const deleteAlertById = createAsyncThunk(
   'alerts/deleteAlertById',
-  async (alertId: string, { rejectWithValue, getState, dispatch }) => {
+  async (alertId: string, { rejectWithValue }) => {
     try {
-      const state = getState() as { alerts: AlertsState };
-      
-      // Prevent multiple delete operations for the same alert
-      if (state.alerts.deleting[alertId]) {
-        return rejectWithValue({ error: 'Delete operation already in progress', alertId });
-      }
-      
+      console.log('🗑️ Deleting alert:', alertId);
       const response = await deleteAlert(alertId);
       
       if (!response.success) {
@@ -146,101 +81,84 @@ export const deleteAlertById = createAsyncThunk(
       
       message.success('Alert deleted successfully!');
       
-      // Refresh snapshot after deleting (but don't wait for it)
-      setTimeout(() => dispatch(fetchAlertsSnapshot()), 100);
-      
       return alertId;
     } catch (error: any) {
+      console.error('❌ Delete alert error:', error.message);
       message.error(error.message || 'Failed to delete alert');
       return rejectWithValue({ error: error.message, alertId });
     }
   }
 );
 
-// Alerts slice
+// Alerts slice (simplified - no snapshots)
 export const alertsSlice = createSlice({
   name: 'alerts',
   initialState,
   reducers: {
-    refreshData: (state) => {
-      state.lastAlertsUpdate = null;
-      state.lastSnapshotUpdate = null;
-    },
-    clearErrors: (state) => {
-      state.alertsError = null;
-      state.snapshotError = null;
-    },
-    setDeleting: (state, action: PayloadAction<{ alertId: string; isDeleting: boolean }>) => {
-      const { alertId, isDeleting } = action.payload;
-      state.deleting[alertId] = isDeleting;
+    clearError: (state) => {
+      state.error = null;
     },
   },
   extraReducers: (builder) => {
     // Fetch alerts
     builder
       .addCase(fetchAlerts.pending, (state) => {
-        state.alertsLoading = true;
-        state.alertsError = null;
+        state.isLoading = true;
+        state.error = null;
+        state.currentOperation = 'alerts';
       })
       .addCase(fetchAlerts.fulfilled, (state, action) => {
-        state.alertsLoading = false;
+        state.isLoading = false;
         state.alerts = action.payload;
-        state.alertsError = null;
-        state.lastAlertsUpdate = Date.now();
+        state.currentOperation = null;
       })
       .addCase(fetchAlerts.rejected, (state, action) => {
-        state.alertsLoading = false;
-        state.alertsError = action.payload as string;
-      });
-
-    // Fetch alerts snapshot
-    builder
-      .addCase(fetchAlertsSnapshot.pending, (state) => {
-        state.snapshotLoading = true;
-        state.snapshotError = null;
-      })
-      .addCase(fetchAlertsSnapshot.fulfilled, (state, action) => {
-        state.snapshotLoading = false;
-        state.snapshot = action.payload;
-        state.snapshotError = null;
-        state.lastSnapshotUpdate = Date.now();
-      })
-      .addCase(fetchAlertsSnapshot.rejected, (state, action) => {
-        state.snapshotLoading = false;
-        state.snapshotError = action.payload as string;
+        state.isLoading = false;
+        state.error = action.payload as string;
+        state.currentOperation = null;
       });
 
     // Create new alert
     builder
       .addCase(createNewAlert.pending, (state) => {
-        state.creating = true;
+        state.isLoading = true;
+        state.error = null;
+        state.currentOperation = 'create';
       })
       .addCase(createNewAlert.fulfilled, (state, action) => {
-        state.creating = false;
+        state.isLoading = false;
         state.alerts.push(action.payload);
-        state.lastAlertsUpdate = Date.now();
+        state.currentOperation = null;
       })
-      .addCase(createNewAlert.rejected, (state) => {
-        state.creating = false;
+      .addCase(createNewAlert.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+        state.currentOperation = null;
       });
 
     // Delete alert
     builder
       .addCase(deleteAlertById.pending, (state, action) => {
-        const alertId = action.meta.arg;
-        state.deleting[alertId] = true;
+        state.isLoading = true;
+        state.error = null;
+        state.currentOperation = 'delete';
+        state.deletingId = action.meta.arg;
       })
       .addCase(deleteAlertById.fulfilled, (state, action) => {
+        state.isLoading = false;
         const alertId = action.payload;
         state.alerts = state.alerts.filter(alert => alert.id !== alertId);
-        delete state.deleting[alertId];
-        state.lastAlertsUpdate = Date.now();
+        state.currentOperation = null;
+        state.deletingId = null;
       })
       .addCase(deleteAlertById.rejected, (state, action) => {
+        state.isLoading = false;
         const payload = action.payload as { error: string; alertId: string };
-        state.deleting[payload.alertId] = false;
+        state.error = payload.error;
+        state.currentOperation = null;
+        state.deletingId = null;
       });
   },
 });
 
-export const { refreshData, setDeleting, clearErrors } = alertsSlice.actions;
+export const { clearError: clearAlertsError } = alertsSlice.actions;

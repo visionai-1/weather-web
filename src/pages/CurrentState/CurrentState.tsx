@@ -7,26 +7,24 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons';
 import { Container, StyledCard, StyledTitle, LoadingSpinner, StyledButton } from '@/components/common';
-import { useAlertsManagement } from '@/hooks/useReduxAlerts';
-import { formatDate, formatRelativeTime, getParameterLabel } from '@/utils/formatters';
+import { useAlertsStatus } from '@/hooks/useAlertsStatus';
+import { formatRelativeTime, getParameterLabel } from '@/utils/formatters';
 
 const { Paragraph, Text } = Typography;
 
 const CurrentState: React.FC = () => {
   const {
     alerts,
-    snapshot,
     isLoading,
     hasError,
     alertsError,
-    snapshotError,
     handleRefresh,
     totalAlerts,
     triggeredAlerts,
     triggeredAlertsCount,
-  } = useAlertsManagement();
+  } = useAlertsStatus();
 
-  if (isLoading && !snapshot) {
+  if (isLoading && alerts.length === 0) {
     return (
       <Container>
         <LoadingSpinner text="Loading alert status..." />
@@ -40,7 +38,7 @@ const CurrentState: React.FC = () => {
         <StyledCard $variant="elevated">
           <StyledTitle level={2}>Current Alert State</StyledTitle>
           <Paragraph type="danger">
-            Error loading alert state: {alertsError || snapshotError}
+            Error loading alert state: {alertsError}
           </Paragraph>
           <StyledButton onClick={handleRefresh} type="primary">
             Try Again
@@ -216,14 +214,12 @@ const CurrentState: React.FC = () => {
         </Col>
       </Row>
 
-      {/* Last Updated */}
-      {snapshot && (
-        <div style={{ textAlign: 'center', marginTop: '24px' }}>
-          <Text type="secondary" style={{ fontSize: '12px' }}>
-            Last checked: {formatDate(snapshot.lastChecked)} ({formatRelativeTime(snapshot.lastChecked)})
-          </Text>
-        </div>
-      )}
+      {/* Status Info */}
+      <div style={{ textAlign: 'center', marginTop: '24px' }}>
+        <Text type="secondary" style={{ fontSize: '12px' }}>
+          Alert monitoring is active • Real-time status
+        </Text>
+      </div>
     </Container>
   );
 };

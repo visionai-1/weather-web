@@ -5,32 +5,51 @@ import type { AlertParameter } from '@/types';
 dayjs.extend(relativeTime);
 
 // Temperature formatting
-export const formatTemperature = (temp: number): string => {
+export const formatTemperature = (temp: number | undefined | null): string => {
+  if (temp === undefined || temp === null || isNaN(temp)) {
+    return '--°C';
+  }
   return `${Math.round(temp)}°C`;
 };
 
 // Humidity formatting
-export const formatHumidity = (humidity: number): string => {
-  return `${humidity}%`;
+export const formatHumidity = (humidity: number | undefined | null): string => {
+  if (humidity === undefined || humidity === null || isNaN(humidity)) {
+    return '--%';
+  }
+  return `${Math.round(humidity)}%`;
 };
 
 // Wind speed formatting
-export const formatWindSpeed = (speed: number): string => {
+export const formatWindSpeed = (speed: number | undefined | null): string => {
+  if (speed === undefined || speed === null || isNaN(speed)) {
+    return '-- m/s';
+  }
   return `${speed.toFixed(1)} m/s`;
 };
 
 // Pressure formatting
-export const formatPressure = (pressure: number): string => {
-  return `${pressure} hPa`;
+export const formatPressure = (pressure: number | undefined | null): string => {
+  if (pressure === undefined || pressure === null || isNaN(pressure)) {
+    return '-- hPa';
+  }
+  return `${Math.round(pressure)} hPa`;
 };
 
 // Visibility formatting
-export const formatVisibility = (visibility: number): string => {
+export const formatVisibility = (visibility: number | undefined | null): string => {
+  if (visibility === undefined || visibility === null || isNaN(visibility)) {
+    return '-- km';
+  }
   return `${(visibility / 1000).toFixed(1)} km`;
 };
 
 // Generic parameter formatter
-export const formatParameter = (parameter: string | AlertParameter, value: number): string => {
+export const formatParameter = (parameter: string | AlertParameter, value: number | undefined | null): string => {
+  if (value === undefined || value === null || isNaN(value)) {
+    return '--';
+  }
+  
   switch (parameter) {
     case 'temperature':
       return formatTemperature(value);
@@ -45,9 +64,9 @@ export const formatParameter = (parameter: string | AlertParameter, value: numbe
     case 'precipitation':
       return `${value.toFixed(1)} mm`;
     case 'cloud_cover':
-      return `${value}%`;
+      return `${Math.round(value)}%`;
     case 'uv_index':
-      return value.toString();
+      return Math.round(value).toString();
     default:
       return value.toString();
   }
@@ -105,11 +124,17 @@ export const getParameterUnit = (parameter: string | AlertParameter): string => 
 };
 
 // Date formatting
-export const formatDate = (date: string | Date): string => {
+export const formatDate = (date: string | Date | undefined | null): string => {
+  if (!date) {
+    return '--';
+  }
   return dayjs(date).format('MMM DD, YYYY HH:mm');
 };
 
-export const formatRelativeTime = (date: string | Date): string => {
+export const formatRelativeTime = (date: string | Date | undefined | null): string => {
+  if (!date) {
+    return '--';
+  }
   return dayjs(date).fromNow();
 };
 
@@ -119,6 +144,9 @@ export const getWeatherIconUrl = (iconCode: string): string => {
 };
 
 // Capitalize first letter
-export const capitalize = (str: string): string => {
+export const capitalize = (str: string | undefined | null): string => {
+  if (!str) {
+    return '';
+  }
   return str.charAt(0).toUpperCase() + str.slice(1);
 };

@@ -2,7 +2,7 @@ import React from 'react';
 import { Typography, Table, Tag, Button } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { Container, StyledCard, StyledTitle, LoadingSpinner } from '@/components/common';
-import { useAlertsManagement } from '@/hooks/useReduxAlerts';
+import { useAlertsManagement } from '@/hooks/useAlertsManagement';
 import { formatDate, getParameterLabel } from '@/utils/formatters';
 
 const { Paragraph } = Typography;

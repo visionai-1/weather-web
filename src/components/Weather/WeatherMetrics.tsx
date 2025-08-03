@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Row, Col, Progress } from 'antd';
 import {
   EyeOutlined,
@@ -53,33 +53,14 @@ const getPressureStatus = (pressure: number): string => {
   return 'High';
 };
 
-export const WeatherMetrics: React.FC<WeatherMetricsProps> = ({ weather }) => {
-  const humidityColor = getHumidityColor(weather.humidity);
+const WeatherMetricsComponent: React.FC<WeatherMetricsProps> = ({ weather }) => {
   const windDirection = getWindDirection(weather.windDirection);
+  const humidityColor = weather.humidity ? getHumidityColor(weather.humidity) : '#52c41a';
   const pressureStatus = weather.pressure ? getPressureStatus(weather.pressure) : 'N/A';
 
   return (
     <MetricsCard title="Weather Details">
       <Row gutter={[0, 16]}>
-        <Col span={24}>
-          <MetricDisplay
-            icon={<CloudOutlined />}
-            label="Humidity"
-            value={formatHumidity(weather.humidity)}
-            color={humidityColor}
-          >
-            <HumidityContainer>
-              <Progress
-                percent={weather.humidity}
-                strokeColor={humidityColor}
-                size="small"
-                showInfo={false}
-                className="humidity-progress"
-              />
-            </HumidityContainer>
-          </MetricDisplay>
-        </Col>
-
         <Col span={24}>
           <MetricDisplay
             icon={<CompassOutlined />}
@@ -88,6 +69,38 @@ export const WeatherMetrics: React.FC<WeatherMetricsProps> = ({ weather }) => {
             subtitle={`${windDirection} (${weather.windDirection}°)`}
           />
         </Col>
+
+        {weather.precipitation && (
+          <Col span={24}>
+            <MetricDisplay
+              icon={<CloudOutlined />}
+              label="Precipitation"
+              value={`${Math.round(weather.precipitation.probability)}%`}
+              subtitle={`Intensity: ${weather.precipitation.intensity.toFixed(1)} mm/h`}
+            />
+          </Col>
+        )}
+
+        {weather.humidity !== undefined && (
+          <Col span={24}>
+            <MetricDisplay
+              icon={<CloudOutlined />}
+              label="Humidity"
+              value={formatHumidity(weather.humidity)}
+              color={humidityColor}
+            >
+              <HumidityContainer>
+                <Progress
+                  percent={weather.humidity}
+                  strokeColor={humidityColor}
+                  size="small"
+                  showInfo={false}
+                  className="humidity-progress"
+                />
+              </HumidityContainer>
+            </MetricDisplay>
+          </Col>
+        )}
 
         {weather.pressure && (
           <Col span={24}>
@@ -100,13 +113,15 @@ export const WeatherMetrics: React.FC<WeatherMetricsProps> = ({ weather }) => {
           </Col>
         )}
 
-        <Col span={24}>
-          <MetricDisplay
-            icon={<EyeOutlined />}
-            label="Visibility"
-            value={formatVisibility(weather.visibility)}
-          />
-        </Col>
+        {weather.visibility !== undefined && (
+          <Col span={24}>
+            <MetricDisplay
+              icon={<EyeOutlined />}
+              label="Visibility"
+              value={formatVisibility(weather.visibility)}
+            />
+          </Col>
+        )}
 
         {weather.cloudCover !== undefined && (
           <Col span={24}>
@@ -127,18 +142,10 @@ export const WeatherMetrics: React.FC<WeatherMetricsProps> = ({ weather }) => {
             </MetricDisplay>
           </Col>
         )}
-
-        {weather.precipitation && (
-          <Col span={24}>
-            <MetricDisplay
-              icon={<CloudOutlined />}
-              label="Precipitation"
-              value={`${Math.round(weather.precipitation.probability)}%`}
-              subtitle={`Intensity: ${weather.precipitation.intensity.toFixed(1)} mm/h`}
-            />
-          </Col>
-        )}
       </Row>
     </MetricsCard>
   );
 };
+
+// Memoize to prevent unnecessary re-renders
+export const WeatherMetrics = memo(WeatherMetricsComponent);

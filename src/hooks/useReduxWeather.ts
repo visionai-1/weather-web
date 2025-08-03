@@ -3,23 +3,20 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   fetchCurrentLocation,
   fetchCurrentWeather,
+  fetchWeatherForecast,
   searchWeatherByCity,
-  clearSearch,
-  refreshLocation,
+  clearSearch as clearSearchAction,
+  setSearchCity,
 } from '@/store/slices/weatherSlice';
 import {
   selectCurrentLocation,
   selectLocationLoading,
   selectLocationError,
-  selectIsLocationReady,
-  selectLocationAge,
   selectCurrentWeather,
   selectWeatherLoading,
   selectWeatherError,
-  selectIsWeatherReady,
-  selectShouldRefreshWeather,
-  selectWeatherAge,
-  selectLastWeatherUpdate,
+  selectForecast,
+  selectForecastLoading,
   selectSearchCity,
   selectSearchWeather,
   selectSearchLoading,
@@ -31,173 +28,129 @@ import {
   selectWeatherHasError,
 } from '@/store/selectors/weatherSelectors';
 
-// Individual hooks for specific weather data
-export const useCurrentLocation = () => {
-  const dispatch = useAppDispatch();
-  
-  const location = useAppSelector(selectCurrentLocation);
-  const loading = useAppSelector(selectLocationLoading);
-  const error = useAppSelector(selectLocationError);
-  const isReady = useAppSelector(selectIsLocationReady);
-  const age = useAppSelector(selectLocationAge);
 
-  const refetch = useCallback(() => {
-    dispatch(fetchCurrentLocation());
-  }, [dispatch]);
-
-  const refresh = useCallback(() => {
-    dispatch(refreshLocation());
-  }, [dispatch]);
-
-  return {
-    location,
-    loading,
-    error,
-    isReady,
-    age,
-    refetch,
-    refresh,
-  };
-};
-
-export const useCurrentWeather = () => {
-  const dispatch = useAppDispatch();
-  
-  const weather = useAppSelector(selectCurrentWeather);
-  const loading = useAppSelector(selectWeatherLoading);
-  const error = useAppSelector(selectWeatherError);
-  const isReady = useAppSelector(selectIsWeatherReady);
-  const shouldRefresh = useAppSelector(selectShouldRefreshWeather);
-  const age = useAppSelector(selectWeatherAge);
-  const lastUpdate = useAppSelector(selectLastWeatherUpdate);
-  const currentLocation = useAppSelector(selectCurrentLocation);
-
-  const refetch = useCallback(() => {
-    if (currentLocation) {
-      dispatch(fetchCurrentWeather(currentLocation));
-    }
-  }, [dispatch, currentLocation]);
-
-  return {
-    weather,
-    loading,
-    error,
-    isReady,
-    shouldRefresh,
-    age,
-    lastUpdate,
-    refetch,
-  };
-};
-
-export const useWeatherSearch = () => {
-  const dispatch = useAppDispatch();
-  
-  const searchCity = useAppSelector(selectSearchCity);
-  const searchWeather = useAppSelector(selectSearchWeather);
-  const loading = useAppSelector(selectSearchLoading);
-  const error = useAppSelector(selectSearchError);
-  const isActive = useAppSelector(selectIsSearchActive);
-
-  const searchByCity = useCallback((cityName: string) => {
-    dispatch(searchWeatherByCity(cityName));
-  }, [dispatch]);
-
-  const clearSearchAction = useCallback(() => {
-    dispatch(clearSearch());
-  }, [dispatch]);
-
-  return {
-    searchCity,
-    searchWeather,
-    loading,
-    error,
-    isActive,
-    searchByCity,
-    clearSearch: clearSearchAction,
-  };
-};
-
-// Combined hook for components that need both location and weather
+/**
+ * Simplified hook for weather data management
+ * Handles location detection, weather fetching, and city search
+ */
 export const useLocationAndWeather = () => {
   const dispatch = useAppDispatch();
   
-  // Selectors
+  // Location state
   const location = useAppSelector(selectCurrentLocation);
+  const locationLoading = useAppSelector(selectLocationLoading);
+  const locationError = useAppSelector(selectLocationError);
+  
+  // Weather state
   const weather = useAppSelector(selectCurrentWeather);
+  const weatherLoading = useAppSelector(selectWeatherLoading);
+  const weatherError = useAppSelector(selectWeatherError);
+  
+  // Forecast state
+  const forecast = useAppSelector(selectForecast);
+  const forecastLoading = useAppSelector(selectForecastLoading);
+  
+  // Search state
   const searchCity = useAppSelector(selectSearchCity);
   const searchWeather = useAppSelector(selectSearchWeather);
+  const searchLoading = useAppSelector(selectSearchLoading);
+  const searchError = useAppSelector(selectSearchError);
+  const isSearchActive = useAppSelector(selectIsSearchActive);
+  
+  // Display state (search takes priority)
   const displayWeather = useAppSelector(selectDisplayWeather);
   const displayLocation = useAppSelector(selectDisplayLocation);
+  
+  // Combined loading and error states
   const isLoading = useAppSelector(selectWeatherIsLoading);
-  const locationLoading = useAppSelector(selectLocationLoading);
-  const weatherLoading = useAppSelector(selectWeatherLoading);
-  const searchLoading = useAppSelector(selectSearchLoading);
   const hasError = useAppSelector(selectWeatherHasError);
-  const locationError = useAppSelector(selectLocationError);
-  const weatherError = useAppSelector(selectWeatherError);
-  const searchError = useAppSelector(selectSearchError);
-  const isLocationReady = useAppSelector(selectIsLocationReady);
-  const isWeatherReady = useAppSelector(selectIsWeatherReady);
-  const isSearchActive = useAppSelector(selectIsSearchActive);
-  const shouldRefreshWeather = useAppSelector(selectShouldRefreshWeather);
 
-  // Actions
-  const getCurrentLocation = useCallback(() => {
-    dispatch(fetchCurrentLocation());
+  // ===== ACTIONS =====
+  
+  const getCurrentLocation = useCallback(async () => {
+    const result = await dispatch(fetchCurrentLocation());
+    return result;
   }, [dispatch]);
 
-  const refreshWeather = useCallback(() => {
-    if (location) {
-      dispatch(fetchCurrentWeather(location));
-    }
+  const fetchWeather = useCallback(async (weatherLocation = location) => {
+    if (!weatherLocation) return;
+    const result = await dispatch(fetchCurrentWeather(weatherLocation));
+    return result;
   }, [dispatch, location]);
 
-  const searchByCity = useCallback((cityName: string) => {
-    dispatch(searchWeatherByCity(cityName));
+  const fetchForecast = useCallback(async (forecastLocation = location) => {
+    if (!forecastLocation) return;
+    const result = await dispatch(fetchWeatherForecast(forecastLocation));
+    return result;
+  }, [dispatch, location]);
+
+  const searchByCity = useCallback(async (cityName: string) => {
+    if (!cityName.trim()) return;
+    const result = await dispatch(searchWeatherByCity(cityName.trim()));
+    return result;
   }, [dispatch]);
 
-  const clearSearchAction = useCallback(() => {
-    dispatch(clearSearch());
+  const clearSearch = useCallback(() => {
+    dispatch(clearSearchAction());
   }, [dispatch]);
 
-  const refreshLocationAction = useCallback(() => {
-    dispatch(refreshLocation());
+  const updateSearchCity = useCallback((city: string) => {
+    dispatch(setSearchCity(city));
   }, [dispatch]);
 
-  const handleRefresh = useCallback(() => {
-    if (isSearchActive) {
-      clearSearchAction();
-    } else {
-      refreshLocationAction();
-      refreshWeather();
+  const refreshAll = useCallback(() => {
+    getCurrentLocation();
+    if (location) {
+      fetchWeather(location);
+      fetchForecast(location);
     }
-  }, [isSearchActive, clearSearchAction, refreshLocationAction, refreshWeather]);
+  }, [getCurrentLocation, location, fetchWeather, fetchForecast]);
 
-  // Auto-fetch location on mount
+  // ===== AUTO-FETCH LOGIC =====
+  
+  // 1. Get location on component mount
   useEffect(() => {
-    if (!location) {
+    if (!location && !locationLoading) {
+      console.log('🌍 Fetching user location...');
       getCurrentLocation();
     }
-  }, [location, getCurrentLocation]);
+  }, []); // Run once on mount
 
-  // Auto-fetch weather when location changes
+  // 2. Get weather when location is available
   useEffect(() => {
-    if (location && !weather) {
-      refreshWeather();
+    if (location && !isSearchActive && !weatherLoading) {
+      console.log('☀️ Fetching weather for:', location.name);
+      fetchWeather(location);
     }
-  }, [location, weather, refreshWeather]);
+  }, [location?.lat, location?.lon, isSearchActive]); // React to location changes
 
+  // 3. Get forecast when location is available
+  useEffect(() => {
+    if (location && !isSearchActive && !forecastLoading && !forecast) {
+      console.log('📊 Fetching forecast for:', location.name);
+      fetchForecast(location);
+    }
+  }, [location?.lat, location?.lon, isSearchActive, forecast]); // React to location changes
+
+  // Handle refresh - clear search or refresh location/weather
+  const handleRefresh = useCallback(() => {
+    if (isSearchActive) {
+      clearSearch();
+    } else {
+      refreshAll();
+    }
+  }, [isSearchActive, clearSearch, refreshAll]);
+
+  // ===== RETURN API =====
+  
   return {
-    // Current data
+    // Raw data
     location,
     weather,
-    
-    // Search data
-    searchCity,
+    forecast,
     searchWeather,
     
-    // Display data (search takes priority)
+    // Display data (handles search priority)
     displayWeather,
     displayLocation,
     
@@ -205,6 +158,7 @@ export const useLocationAndWeather = () => {
     isLoading,
     locationLoading,
     weatherLoading,
+    forecastLoading,
     searchLoading,
     
     // Error states
@@ -213,18 +167,18 @@ export const useLocationAndWeather = () => {
     weatherError,
     searchError,
     
-    // Status
-    isLocationReady,
-    isWeatherReady,
+    // Search state
+    searchCity,
     isSearchActive,
-    shouldRefreshWeather,
     
-    // Actions
+    // Actions (simplified API)
     getCurrentLocation,
-    refreshWeather,
+    fetchWeather,
+    fetchForecast,
     searchByCity,
-    clearSearch: clearSearchAction,
-    refreshLocation: refreshLocationAction,
+    clearSearch,
+    updateSearchCity,
+    refreshAll,
     handleRefresh,
   };
 };

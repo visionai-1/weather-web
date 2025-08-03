@@ -1,5 +1,5 @@
-import React from 'react';
-import { Row, Col, Alert, Input } from 'antd';
+import React, { useCallback, useMemo } from 'react';
+import { Row, Col, Alert, Input, Spin } from 'antd';
 import { 
   ReloadOutlined, 
   EnvironmentOutlined,
@@ -9,6 +9,7 @@ import styled from 'styled-components';
 import { useLocationAndWeather } from '@/hooks/useReduxWeather';
 import { WeatherCard } from '@/components/Weather/WeatherCard';
 import { WeatherMetrics } from '@/components/Weather/WeatherMetrics';
+import { WeatherForecast } from '@/components/Weather/WeatherForecast';
 import { 
   Container, 
   StyledCard, 
@@ -16,8 +17,9 @@ import {
   LoadingSpinner,
   Flex 
 } from '@/components/common';
+import { debounce } from '@/utils/debounce';
 
-const { Search } = Input;
+// Remove the destructuring since we'll use Input.Search directly
 
 const HeaderCard = styled(StyledCard)`
   margin-bottom: ${({ theme }) => theme.spacing.lg};
@@ -51,22 +53,55 @@ const Home: React.FC = () => {
     location,
     displayWeather,
     displayLocation,
+    forecast,
     isLoading,
     hasError,
     locationError,
     weatherError,
-    searchCity,
+    searchCity, // Used for value prop
     searchWeather,
+    searchLoading, // Add search loading state
+    isSearchActive, // Add search active state
     searchByCity,
     clearSearch,
+    updateSearchCity,
     handleRefresh,
   } = useLocationAndWeather();
 
-  const handleCitySearch = (city: string) => {
-    if (city.trim()) {
-      searchByCity(city.trim());
-    }
-  };
+  // Debounced API call - only triggers with 3+ characters
+  const debouncedApiSearch = useMemo(
+    () => debounce((city: string) => {
+      const trimmedCity = city.trim();
+      if (trimmedCity.length >= 3) {
+        searchByCity(trimmedCity);
+      }
+    }, 1500), // 1.5 seconds delay
+    [searchByCity]
+  );
+
+  const handleCitySearch = useCallback((city: string) => {
+    // Always update the input state immediately for typing feedback
+    updateSearchCity(city);
+    // Trigger debounced API call only for 3+ characters
+    debouncedApiSearch(city);
+  }, [updateSearchCity, debouncedApiSearch]);
+
+  // Memoize weather card props to prevent unnecessary re-renders
+  const weatherCardProps = useMemo(() => ({
+    weather: displayWeather!,
+    location: displayLocation,
+    onRefresh: handleRefresh,
+  }), [displayWeather, displayLocation, handleRefresh]);
+
+  // Memoize weather metrics props
+  const weatherMetricsProps = useMemo(() => ({
+    weather: displayWeather!,
+  }), [displayWeather]);
+
+  // Memoize forecast props
+  const forecastProps = useMemo(() => ({
+    forecast: forecast!,
+  }), [forecast]);
 
   const error = hasError ? (locationError || weatherError) : null;
 
@@ -82,14 +117,19 @@ const Home: React.FC = () => {
       </HeaderCard>
 
       <SearchContainer>
-        <Search
-          placeholder="Search for a city (e.g., London, Tokyo)"
-          value={searchCity}
-          onSearch={handleCitySearch}
-          size="large"
-          prefix={<SearchOutlined />}
-          enterButton="Search"
-        />
+        <Spin spinning={searchLoading} tip="Searching for city...">
+          <Input.Search
+            placeholder="Search for a city (min. 3 letters, e.g., London, Tokyo)"
+            value={searchCity}
+            onSearch={handleCitySearch}
+            onChange={(e) => handleCitySearch(e.target.value)}
+            size="large"
+            prefix={<SearchOutlined />}
+            enterButton="Search"
+            allowClear
+            loading={searchLoading}
+          />
+        </Spin>
         {searchWeather && (
           <div style={{ textAlign: 'center', marginTop: '8px' }}>
             <StyledButton type="link" onClick={clearSearch}>
@@ -122,18 +162,27 @@ const Home: React.FC = () => {
         </StyledCard>
       ) : displayWeather ? (
         <>
-          <Row gutter={[24, 24]}>
-            <Col xs={24} lg={16}>
-              <WeatherCard 
-                weather={displayWeather} 
-                location={displayLocation}
-                onRefresh={handleRefresh}
-              />
-            </Col>
-            <Col xs={24} lg={8}>
-              <WeatherMetrics weather={displayWeather} />
-            </Col>
-          </Row>
+          <Spin spinning={searchLoading && isSearchActive} tip="Loading weather data...">
+            <Row gutter={[24, 24]}>
+              <Col xs={24} lg={16}>
+                <WeatherCard {...weatherCardProps} />
+              </Col>
+              <Col xs={24} lg={8}>
+                <WeatherMetrics {...weatherMetricsProps} />
+              </Col>
+            </Row>
+          </Spin>
+
+          {/* Show forecast when available */}
+          {forecast && !searchWeather && (
+            <Spin spinning={searchLoading && isSearchActive} tip="Loading forecast...">
+              <Row gutter={[24, 24]} style={{ marginTop: '24px' }}>
+                <Col xs={24}>
+                  <WeatherForecast {...forecastProps} />
+                </Col>
+              </Row>
+            </Spin>
+          )}
 
           {location && !searchWeather && (
             <StyledCard style={{ marginTop: '24px' }}>
@@ -145,8 +194,8 @@ const Home: React.FC = () => {
                 </span>
               </LocationInfo>
               <Flex justify="center">
-                <StyledButton 
-                  icon={<ReloadOutlined />} 
+                <StyledButton
+                  icon={<ReloadOutlined />}
                   onClick={handleRefresh}
                   type="primary"
                 >

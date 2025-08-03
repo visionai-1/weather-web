@@ -1,18 +1,19 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Space, Tag } from 'antd';
 import { ReloadOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import styled from 'styled-components';
-import type { WeatherData } from '@/types';
+import type { WeatherData, Location } from '@/types';
 import { 
   formatTemperature, 
   formatDate, 
+  formatWindSpeed,
   capitalize 
 } from '@/utils/formatters';
 import { StyledCard, StyledButton } from '@/components/common';
 
 interface WeatherCardProps {
   weather: WeatherData;
-  location: string;
+  location: Location | null;
   onRefresh?: () => void;
 }
 
@@ -102,47 +103,60 @@ const UpdateInfo = styled.div`
   }
 `;
 
-// Get weather icon based on weather code (Tomorrow.io codes)
-const getWeatherIcon = (weatherCode?: number): string => {
-  if (!weatherCode) return '☀️';
+// Get weather icon based on condition string or weather code
+const getWeatherIcon = (condition?: string, weatherCode?: number): string => {
+  // If we have a weather code, use it
+  if (weatherCode) {
+    const codeMap: Record<number, string> = {
+      1000: '☀️', // Clear
+      1100: '🌤️', // Mostly Clear
+      1101: '⛅', // Partly Cloudy
+      1102: '☁️', // Mostly Cloudy
+      1001: '☁️', // Cloudy
+      2000: '🌫️', // Fog
+      2100: '🌫️', // Light Fog
+      4000: '🌦️', // Drizzle
+      4001: '🌧️', // Rain
+      4200: '🌦️', // Light Rain
+      4201: '🌧️', // Heavy Rain
+      5000: '❄️', // Snow
+      5001: '🌨️', // Flurries
+      5100: '🌨️', // Light Snow
+      5101: '❄️', // Heavy Snow
+      6000: '🌨️', // Freezing Drizzle
+      6001: '🌨️', // Freezing Rain
+      6200: '🌨️', // Light Freezing Rain
+      6201: '🌨️', // Heavy Freezing Rain
+      7000: '🧊', // Ice Pellets
+      7101: '🧊', // Heavy Ice Pellets
+      7102: '🧊', // Light Ice Pellets
+      8000: '⛈️', // Thunderstorm
+    };
+    return codeMap[weatherCode] || '🌤️';
+  }
   
-  // Tomorrow.io weather codes mapping to emojis
-  const codeMap: Record<number, string> = {
-    1000: '☀️', // Clear
-    1100: '🌤️', // Mostly Clear
-    1101: '⛅', // Partly Cloudy
-    1102: '☁️', // Mostly Cloudy
-    1001: '☁️', // Cloudy
-    2000: '🌫️', // Fog
-    2100: '🌫️', // Light Fog
-    4000: '🌦️', // Drizzle
-    4001: '🌧️', // Rain
-    4200: '🌦️', // Light Rain
-    4201: '🌧️', // Heavy Rain
-    5000: '❄️', // Snow
-    5001: '🌨️', // Flurries
-    5100: '🌨️', // Light Snow
-    5101: '❄️', // Heavy Snow
-    6000: '🌨️', // Freezing Drizzle
-    6001: '🌨️', // Freezing Rain
-    6200: '🌨️', // Light Freezing Rain
-    6201: '🌨️', // Heavy Freezing Rain
-    7000: '🧊', // Ice Pellets
-    7101: '🧊', // Heavy Ice Pellets
-    7102: '🧊', // Light Ice Pellets
-    8000: '⛈️', // Thunderstorm
-  };
+  // Fallback to condition string matching
+  if (condition) {
+    const conditionLower = condition.toLowerCase();
+    if (conditionLower.includes('clear')) return '☀️';
+    if (conditionLower.includes('cloud')) return '☁️';
+    if (conditionLower.includes('rain')) return '🌧️';
+    if (conditionLower.includes('snow')) return '❄️';
+    if (conditionLower.includes('fog')) return '🌫️';
+    if (conditionLower.includes('storm')) return '⛈️';
+  }
   
-  return codeMap[weatherCode] || '🌤️';
+  return '☀️'; // Default to sunny
 };
 
-export const WeatherCard: React.FC<WeatherCardProps> = ({
+const WeatherCardComponent: React.FC<WeatherCardProps> = ({
   weather,
   location,
   onRefresh,
 }) => {
-  const weatherIcon = getWeatherIcon(weather.weatherCode);
+  const weatherIcon = getWeatherIcon(weather.condition, weather.weatherCode);
   const timestamp = weather.timestamp ? formatDate(weather.timestamp) : formatDate(new Date());
+  const locationName = location?.name || weather.location?.name || 'Unknown Location';
 
   return (
     <WeatherStyledCard
@@ -150,7 +164,7 @@ export const WeatherCard: React.FC<WeatherCardProps> = ({
         <WeatherHeader>
           <div className="location">
             <EnvironmentOutlined />
-            {location}
+            {locationName}
           </div>
         </WeatherHeader>
       }
@@ -177,21 +191,19 @@ export const WeatherCard: React.FC<WeatherCardProps> = ({
             {formatTemperature(weather.temperature)}
           </div>
           <div className="weather-info">
-            {weather.description || 'Current conditions'}
+            {weather.condition || weather.description || 'Current conditions'}
           </div>
-          {weather.uvIndex !== undefined && (
-            <div className="weather-info">
-              UV Index: {weather.uvIndex}
-            </div>
-          )}
+          <div className="weather-info">
+            Wind: {formatWindSpeed(weather.windSpeed)}
+          </div>
         </TemperatureInfo>
         
         <WeatherDescription>
           <div className="condition">
-            Live Weather
+            {weather.condition || 'Live Weather'}
           </div>
           <div className="description">
-            {capitalize(weather.description || 'Real-time data')}
+            {capitalize(weather.description || weather.condition || 'Real-time data')}
           </div>
         </WeatherDescription>
       </MainWeatherInfo>
@@ -224,3 +236,6 @@ export const WeatherCard: React.FC<WeatherCardProps> = ({
     </WeatherStyledCard>
   );
 };
+
+// Memoize to prevent unnecessary re-renders
+export const WeatherCard = memo(WeatherCardComponent);

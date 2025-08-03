@@ -1,77 +1,38 @@
 import { createSelector } from '@reduxjs/toolkit';
-import type { RootState } from '../index';
+import type { RootState } from '@/store';
 
-// Base selector
-const selectAlertsState = (state: RootState) => state.alerts;
+// Basic selectors (simplified - no snapshots)
+export const selectAlertsState = (state: RootState) => state.alerts;
 
-// Alerts list selectors
-export const selectAlerts = createSelector(
-  [selectAlertsState],
-  (alerts) => alerts.alerts
-);
+// Data selectors
+export const selectAlerts = (state: RootState) => state.alerts.alerts;
 
+// Loading and error selectors (simplified)
+export const selectAlertsIsLoading = (state: RootState) => state.alerts.isLoading;
+export const selectAlertsError = (state: RootState) => state.alerts.error;
+export const selectAlertsCurrentOperation = (state: RootState) => state.alerts.currentOperation;
+export const selectDeletingId = (state: RootState) => state.alerts.deletingId;
+
+// Specific operation loading states
 export const selectAlertsLoading = createSelector(
-  [selectAlertsState],
-  (alerts) => alerts.alertsLoading
+  [selectAlertsIsLoading, selectAlertsCurrentOperation],
+  (isLoading, operation) => isLoading && operation === 'alerts'
 );
 
-export const selectAlertsError = createSelector(
-  [selectAlertsState],
-  (alerts) => alerts.alertsError
-);
-
-export const selectLastAlertsUpdate = createSelector(
-  [selectAlertsState],
-  (alerts) => alerts.lastAlertsUpdate
-);
-
-// Snapshot selectors
-export const selectSnapshot = createSelector(
-  [selectAlertsState],
-  (alerts) => alerts.snapshot
-);
-
-export const selectSnapshotLoading = createSelector(
-  [selectAlertsState],
-  (alerts) => alerts.snapshotLoading
-);
-
-export const selectSnapshotError = createSelector(
-  [selectAlertsState],
-  (alerts) => alerts.snapshotError
-);
-
-export const selectLastSnapshotUpdate = createSelector(
-  [selectAlertsState],
-  (alerts) => alerts.lastSnapshotUpdate
-);
-
-// Operations selectors
 export const selectCreating = createSelector(
-  [selectAlertsState],
-  (alerts) => alerts.creating
+  [selectAlertsIsLoading, selectAlertsCurrentOperation],
+  (isLoading, operation) => isLoading && operation === 'create'
 );
 
 export const selectDeleting = createSelector(
-  [selectAlertsState],
-  (alerts) => alerts.deleting
+  [selectDeletingId],
+  (deletingId) => deletingId ? { [deletingId]: true } : {}
 );
 
-export const selectIsDeleting = (alertId: string) =>
-  createSelector(
-    [selectDeleting],
-    (deleting) => deleting[alertId] || false
-  );
-
-// Computed selectors
-export const selectAlertsIsLoading = createSelector(
-  [selectAlertsLoading, selectSnapshotLoading],
-  (alertsLoading, snapshotLoading) => alertsLoading || snapshotLoading
-);
-
+// Derived selectors
 export const selectAlertsHasError = createSelector(
-  [selectAlertsError, selectSnapshotError],
-  (alertsError, snapshotError) => !!alertsError || !!snapshotError
+  [selectAlertsError],
+  (error) => !!error
 );
 
 export const selectTotalAlerts = createSelector(
@@ -84,14 +45,14 @@ export const selectTriggeredAlerts = createSelector(
   (alerts) => alerts.filter(alert => alert.lastState === 'triggered')
 );
 
-export const selectTriggeredAlertsCount = createSelector(
-  [selectTriggeredAlerts],
-  (triggeredAlerts) => triggeredAlerts.length
-);
-
 export const selectActiveAlerts = createSelector(
   [selectAlerts],
   (alerts) => alerts.filter(alert => alert.lastState !== 'triggered')
+);
+
+export const selectTriggeredAlertsCount = createSelector(
+  [selectTriggeredAlerts],
+  (triggeredAlerts) => triggeredAlerts.length
 );
 
 export const selectActiveAlertsCount = createSelector(
@@ -99,56 +60,29 @@ export const selectActiveAlertsCount = createSelector(
   (activeAlerts) => activeAlerts.length
 );
 
-// Alert finder
-export const selectAlertById = (alertId: string) =>
-  createSelector(
-    [selectAlerts],
-    (alerts) => alerts.find(alert => alert.id === alertId)
-  );
-
-// Status selectors
-export const selectShouldRefreshAlerts = createSelector(
-  [selectAlertsLoading, selectLastAlertsUpdate],
-  (loading, lastUpdate) => {
-    if (loading) return false;
-    if (!lastUpdate) return true;
-    return Date.now() - lastUpdate > 2 * 60 * 1000; // 2 minutes
-  }
+// Helper selectors
+export const selectAlertById = (alertId: string) => createSelector(
+  [selectAlerts],
+  (alerts) => alerts.find(alert => alert.id === alertId || alert._id === alertId)
 );
 
-export const selectShouldRefreshSnapshot = createSelector(
-  [selectSnapshotLoading, selectLastSnapshotUpdate],
-  (loading, lastUpdate) => {
-    if (loading) return false;
-    if (!lastUpdate) return true;
-    return Date.now() - lastUpdate > 30 * 1000; // 30 seconds
-  }
+export const selectIsDeleting = (alertId: string) => createSelector(
+  [selectDeletingId],
+  (deletingId) => deletingId === alertId
 );
 
-export const selectAlertsAge = createSelector(
-  [selectLastAlertsUpdate],
-  (lastUpdate) => {
-    if (!lastUpdate) return null;
-    return Date.now() - lastUpdate;
-  }
-);
-
-export const selectSnapshotAge = createSelector(
-  [selectLastSnapshotUpdate],
-  (lastUpdate) => {
-    if (!lastUpdate) return null;
-    return Date.now() - lastUpdate;
-  }
-);
-
-// Summary selector
+// Summary selector (no snapshots needed)
 export const selectAlertsSummary = createSelector(
-  [selectAlerts, selectTriggeredAlertsCount, selectActiveAlertsCount, selectLastAlertsUpdate],
-  (alerts, triggered, active, lastUpdate) => ({
-    total: alerts.length,
+  [selectTotalAlerts, selectTriggeredAlertsCount, selectActiveAlertsCount],
+  (total, triggered, active) => ({
+    total,
     triggered,
     active,
-    hasData: alerts.length > 0,
-    lastUpdate,
+    status: triggered > 0 ? 'alert' : 'normal'
   })
 );
+
+// Backward compatibility exports (avoid naming conflicts)
+export const selectIsLoading = selectAlertsIsLoading;
+export const selectHasError = selectAlertsHasError;
+export const selectError = selectAlertsError;
