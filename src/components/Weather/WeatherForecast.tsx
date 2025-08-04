@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Card, List, Tag, Typography } from 'antd';
+import { Card, Table, Tag, Typography } from 'antd';
 import styled from 'styled-components';
 import type { ForecastData } from '@/types';
 import { formatTemperature, formatDate } from '@/utils/formatters';
@@ -10,34 +10,44 @@ interface WeatherForecastProps {
   forecast: ForecastData;
 }
 
-const ForecastCard = styled(Card)`
+
+
+const StyledForecastCard = styled(Card)`
   .ant-card-head {
     border-bottom: 2px solid ${({ theme }) => theme.colors.border};
   }
 `;
 
-const ForecastItem = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
+const ForecastTable = styled(Table)`
+  .ant-table-thead > tr > th {
+    background-color: ${({ theme }) => theme.colors.background.secondary};
+    font-weight: 600;
+  }
+  
+  .ant-table-tbody > tr > td {
+    padding: 12px 8px;
+  }
 `;
 
-const ForecastTime = styled(Text)`
-  font-weight: 500;
-  min-width: 100px;
+const WeatherIcon = styled.span`
+  font-size: 20px;
+  margin-right: 8px;
 `;
 
-const ForecastTemp = styled(Text)`
+const TemperatureCell = styled.div`
   font-size: 16px;
   font-weight: bold;
   color: ${({ theme }) => theme.colors.primary};
 `;
 
-const ForecastDetails = styled.div`
-  display: flex;
-  gap: 8px;
-  align-items: center;
+const TimeCell = styled.div`
+  font-weight: 500;
+  color: ${({ theme }) => theme.colors.text.primary};
+`;
+
+const DescriptionCell = styled.div`
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 // Get weather icon based on weather code
@@ -70,8 +80,72 @@ const WeatherForecastComponent: React.FC<WeatherForecastProps> = ({ forecast }) 
   const maxItems = forecast.timestep === '1h' ? 12 : 7;
   const limitedIntervals = forecast.intervals.slice(0, maxItems);
 
+  // Prepare table data for horizontal display
+  const tableData = limitedIntervals.map((interval, index) => ({
+    key: index,
+    time: forecast.timestep === '1h' 
+      ? new Date(interval.time).toLocaleTimeString('en-US', { hour: 'numeric', hour12: true })
+      : formatDate(interval.time).split(' ')[0],
+    weather: (
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <WeatherIcon>{getWeatherIcon(interval.weatherCode)}</WeatherIcon>
+        <DescriptionCell>{interval.description}</DescriptionCell>
+      </div>
+    ),
+    temperature: <TemperatureCell>{formatTemperature(interval.temperature)}</TemperatureCell>,
+    precipitation: interval.precipitationChance > 0 ? (
+      <Tag color="blue">🌧️ {interval.precipitationChance}%</Tag>
+    ) : '-',
+    humidity: interval.humidity ? `${interval.humidity}%` : '-',
+    windSpeed: interval.windSpeed ? `${interval.windSpeed} m/s` : '-',
+  }));
+
+  const columns = [
+    {
+      title: 'Time',
+      dataIndex: 'time',
+      key: 'time',
+      width: 80,
+      render: (time: string) => <TimeCell>{time}</TimeCell>,
+    },
+    {
+      title: 'Weather',
+      dataIndex: 'weather',
+      key: 'weather',
+      width: 200,
+    },
+    {
+      title: 'Temperature',
+      dataIndex: 'temperature',
+      key: 'temperature',
+      width: 100,
+      align: 'center' as const,
+    },
+    {
+      title: 'Precipitation',
+      dataIndex: 'precipitation',
+      key: 'precipitation',
+      width: 120,
+      align: 'center' as const,
+    },
+    {
+      title: 'Humidity',
+      dataIndex: 'humidity',
+      key: 'humidity',
+      width: 100,
+      align: 'center' as const,
+    },
+    {
+      title: 'Wind Speed',
+      dataIndex: 'windSpeed',
+      key: 'windSpeed',
+      width: 120,
+      align: 'center' as const,
+    },
+  ];
+
   return (
-    <ForecastCard
+    <StyledForecastCard
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span>📊</span>
@@ -82,40 +156,12 @@ const WeatherForecastComponent: React.FC<WeatherForecastProps> = ({ forecast }) 
         </div>
       }
     >
-      <List
-        dataSource={limitedIntervals}
-        renderItem={(interval) => (
-          <List.Item>
-            <ForecastItem>
-              <ForecastTime>
-                {forecast.timestep === '1h' 
-                  ? new Date(interval.time).toLocaleTimeString('en-US', { hour: 'numeric', hour12: true })
-                  : formatDate(interval.time).split(' ')[0] // Date only
-                }
-              </ForecastTime>
-              
-              <ForecastDetails>
-                <span style={{ fontSize: '20px' }}>
-                  {getWeatherIcon(interval.weatherCode)}
-                </span>
-                
-                <ForecastTemp>
-                  {formatTemperature(interval.temperature)}
-                </ForecastTemp>
-                
-                {interval.precipitationChance > 0 && (
-                  <Tag color="blue">
-                    🌧️ {interval.precipitationChance}%
-                  </Tag>
-                )}
-                
-                <Text type="secondary" style={{ fontSize: '12px' }}>
-                  {interval.description}
-                </Text>
-              </ForecastDetails>
-            </ForecastItem>
-          </List.Item>
-        )}
+      <ForecastTable
+        columns={columns}
+        dataSource={tableData}
+        pagination={false}
+        size="small"
+        scroll={{ x: 800 }}
       />
       
       <div style={{ textAlign: 'center', marginTop: '16px' }}>
@@ -123,7 +169,7 @@ const WeatherForecastComponent: React.FC<WeatherForecastProps> = ({ forecast }) 
           Showing next {limitedIntervals.length} {forecast.timestep === '1h' ? 'hours' : 'days'}
         </Text>
       </div>
-    </ForecastCard>
+    </StyledForecastCard>
   );
 };
 

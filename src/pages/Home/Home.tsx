@@ -163,20 +163,20 @@ const Home: React.FC = () => {
       ) : displayWeather ? (
         <>
           <Spin spinning={searchLoading && isSearchActive} tip="Loading weather data...">
-            <Row gutter={[24, 24]}>
-              <Col xs={24} lg={16}>
-                <WeatherCard {...weatherCardProps} />
-              </Col>
-              <Col xs={24} lg={8}>
-                <WeatherMetrics {...weatherMetricsProps} />
-              </Col>
-            </Row>
+                      <Row gutter={[32, 32]}>
+            <Col xs={24} lg={16}>
+              <WeatherCard {...weatherCardProps} />
+            </Col>
+            <Col xs={24} lg={8}>
+              <WeatherMetrics {...weatherMetricsProps} />
+            </Col>
+          </Row>
           </Spin>
 
           {/* Show forecast when available */}
           {forecast && !searchWeather && (
             <Spin spinning={searchLoading && isSearchActive} tip="Loading forecast...">
-              <Row gutter={[24, 24]} style={{ marginTop: '24px' }}>
+              <Row gutter={[32, 32]} style={{ marginTop: '32px' }}>
                 <Col xs={24}>
                   <WeatherForecast {...forecastProps} />
                 </Col>

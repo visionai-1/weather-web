@@ -1,13 +1,16 @@
-import React from 'react';
-import { Typography, Table, Tag, Button } from 'antd';
+import React, { useState } from 'react';
+import { Typography, Table, Tag, Button, Popconfirm } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { Container, StyledCard, StyledTitle, LoadingSpinner } from '@/components/common';
 import { useAlertsManagement } from '@/hooks/useAlertsManagement';
 import { formatDate, getParameterLabel } from '@/utils/formatters';
+import { CreateAlertModal } from '@/components/Alerts/CreateAlertModal';
 
 const { Paragraph } = Typography;
 
 const Alerts: React.FC = () => {
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  
   const {
     alerts,
     alertsLoading,
@@ -34,11 +37,30 @@ const Alerts: React.FC = () => {
       title: 'Location',
       dataIndex: 'location',
       key: 'location',
-      render: (location: any) => (
-        <span style={{ fontWeight: 500 }}>
-          {location.city || `${location.lat?.toFixed(2)}, ${location.lon?.toFixed(2)}`}
-        </span>
-      ),
+      render: (location: any) => {
+        const hasCity = location.city && location.city.trim();
+        const hasCoords = location.lat && location.lon;
+        
+        return (
+          <div>
+            {hasCity ? (
+              <div style={{ fontWeight: 500 }}>
+                {location.city}
+              </div>
+            ) : null}
+            {hasCoords && (
+              <div style={{ fontSize: '12px', color: '#666' }}>
+                {location.lat.toFixed(4)}, {location.lon.toFixed(4)}
+              </div>
+            )}
+            {!hasCity && !hasCoords && (
+              <span style={{ color: '#999', fontStyle: 'italic' }}>
+                Location not specified
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       title: 'Type',
@@ -80,16 +102,24 @@ const Alerts: React.FC = () => {
       title: 'Actions',
       key: 'actions',
       render: (_: any, record: any) => (
-        <Button
-          type="text"
-          danger
-          size="small"
-          icon={<DeleteOutlined />}
-          loading={isDeleting(record.id || record._id)}
-          onClick={() => deleteAlert(record.id || record._id)}
+        <Popconfirm
+          title="Delete Alert"
+          description="Are you sure you want to delete this alert? This action cannot be undone."
+          onConfirm={() => deleteAlert(record.id || record._id)}
+          okText="Yes, Delete"
+          cancelText="Cancel"
+          okType="danger"
         >
-          Delete
-        </Button>
+          <Button
+            type="text"
+            danger
+            size="small"
+            icon={<DeleteOutlined />}
+            loading={isDeleting(record.id || record._id)}
+          >
+            Delete
+          </Button>
+        </Popconfirm>
       ),
     },
   ];
@@ -125,10 +155,7 @@ const Alerts: React.FC = () => {
           <Button 
             type="primary" 
             icon={<PlusOutlined />}
-            onClick={() => {
-              // TODO: Open create alert modal/form
-              console.log('Create alert clicked');
-            }}
+            onClick={() => setCreateModalOpen(true)}
           >
             Create Alert
           </Button>
@@ -148,6 +175,11 @@ const Alerts: React.FC = () => {
           />
         )}
       </StyledCard>
+
+      <CreateAlertModal
+        open={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+      />
     </Container>
   );
 };

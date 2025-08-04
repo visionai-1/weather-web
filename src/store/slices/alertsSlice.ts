@@ -147,7 +147,9 @@ export const alertsSlice = createSlice({
       .addCase(deleteAlertById.fulfilled, (state, action) => {
         state.isLoading = false;
         const alertId = action.payload;
-        state.alerts = state.alerts.filter(alert => alert.id !== alertId);
+        state.alerts = state.alerts.filter(alert => 
+          alert.id !== alertId && alert._id !== alertId
+        );
         state.currentOperation = null;
         state.deletingId = null;
       })
