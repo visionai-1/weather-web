@@ -73,11 +73,8 @@ console.log('VITE_ALERTS_API_URL:', import.meta.env.VITE_ALERTS_API_URL);
 console.log('VITE_TOMORROW_WEATHER_API_URL:', import.meta.env.VITE_TOMORROW_WEATHER_API_URL);
 
 // API instances with fallback URLs
-const alertsApiUrl = import.meta.env.VITE_ALERTS_API_URL || 
-  (import.meta.env.PROD ? 'https://your-alerts-api-domain.com/api/v1' : 'http://localhost:3001/api/v1');
-
-const weatherApiUrl = import.meta.env.VITE_TOMORROW_WEATHER_API_URL || 
-  (import.meta.env.PROD ? 'https://your-weather-api-domain.com/api/v1' : 'http://localhost:3000/api/v1');
+const alertsApiUrl = import.meta.env.VITE_ALERTS_API_URL 
+const weatherApiUrl = import.meta.env.VITE_TOMORROW_WEATHER_API_URL
 
 console.log('🔧 Using Alerts API URL:', alertsApiUrl);
 console.log('🔧 Using Weather API URL:', weatherApiUrl);
