@@ -9,9 +9,6 @@ const createApiInstance = (baseURL: string): AxiosInstance => {
     timeout: 50000,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
     withCredentials: false, // Disable credentials for CORS
   });
@@ -19,11 +16,6 @@ const createApiInstance = (baseURL: string): AxiosInstance => {
   // Request interceptor
   instance.interceptors.request.use(
     (config: any) => {
-      // Add CORS headers for production
-      if (import.meta.env.PROD) {
-        config.headers['Origin'] = window.location.origin;
-      }
-      
       console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
       return config;
     },
@@ -73,8 +65,8 @@ console.log('VITE_ALERTS_API_URL:', import.meta.env.VITE_ALERTS_API_URL);
 console.log('VITE_TOMORROW_WEATHER_API_URL:', import.meta.env.VITE_TOMORROW_WEATHER_API_URL);
 
 // API instances with fallback URLs
-const alertsApiUrl = `${import.meta.env.VITE_ALERTS_API_URL}/api/v1`
-const weatherApiUrl = `${import.meta.env.VITE_TOMORROW_WEATHER_API_URL}/api/v1`
+const alertsApiUrl = `${import.meta.env.VITE_ALERTS_API_URL}/api/v1/`
+const weatherApiUrl = `${import.meta.env.VITE_TOMORROW_WEATHER_API_URL}/api/v1/`
 
 console.log('🔧 Using Alerts API URL:', alertsApiUrl);
 console.log('🔧 Using Weather API URL:', weatherApiUrl);
